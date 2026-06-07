@@ -1,40 +1,43 @@
-// src/services/api.ts - Versão Corrigida com Tipagem Completa
+// src/services/api.ts - Versão com API real
 import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://SEU_IP:8080/api'; // Substitua pelo IP da sua API Java/.NET
+// Base URL correta para sua API
+const API_BASE_URL = 'http://localhost:8080/api/agro';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor para tratamento de erros global com tipagem correta
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  (error: AxiosError) => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor para adicionar token se necessário (opcional)
+// Interceptor para adicionar token se necessário
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    // Adicione headers de autenticação aqui se necessário
-    // config.headers.Authorization = `Bearer ${token}`;
+  async (config: InternalAxiosRequestConfig) => {
+    console.log(`📡 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     return config;
   },
   (error: AxiosError) => {
+    console.error('❌ Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Tipos de dados
+// Interceptor para tratamento de erros
+api.interceptors.response.use(
+  (response: AxiosResponse) => {
+    console.log(`✅ Response: ${response.status} - ${response.config.url}`);
+    return response;
+  },
+  (error: AxiosError) => {
+    console.error('❌ API Error:', error.response?.status, error.response?.data);
+    return Promise.reject(error);
+  }
+);
+
+// ========== TIPOS DE DADOS ==========
 export interface Plantation {
   id: number;
   name: string;
@@ -45,6 +48,16 @@ export interface Plantation {
   temperature: number;
   irrigationStatus: 'active' | 'inactive' | 'blocked';
   lastIrrigation: string;
+}
+
+export interface SensorData {
+  id: number;
+  soilMoisture: number;
+  temperature: number;
+  humidity: number;
+  timestamp: string;
+  satelliteRainPrediction: number;
+  irrigationRecommended: boolean;
 }
 
 export interface Alert {
@@ -58,80 +71,95 @@ export interface Alert {
   plantationId?: number;
 }
 
-export interface SensorData {
-  id: number;
-  soilMoisture: number;
-  temperature: number;
-  humidity: number;
-  timestamp: string;
-  satelliteRainPrediction: number;
-  irrigationRecommended: boolean;
-}
-
-// Tipo para resposta da API
-export interface ApiResponse<T = any> {
-  data: T;
-  message?: string;
-  success: boolean;
-}
-
-// CRUD para Plantações com tipagem completa
-export const plantationAPI = {
-  getAll: (): Promise<AxiosResponse<Plantation[]>> => api.get<Plantation[]>('/plantations'),
+// ========== API DE SOLO (CRUD completo) ==========
+// URLs baseadas no padrão: /api/agro/solo
+export const soloAPI = {
+  // Criar registro de solo
+  create: (data: Omit<SensorData, 'id'>): Promise<AxiosResponse<SensorData>> => 
+    api.post<SensorData>('/solo', data),
   
-  getById: (id: number): Promise<AxiosResponse<Plantation>> => 
-    api.get<Plantation>(`/plantations/${id}`),
+  // Buscar todos os registros
+  getAll: (): Promise<AxiosResponse<SensorData[]>> => 
+    api.get<SensorData[]>('/solo'),
   
-  create: (data: Omit<Plantation, 'id'>): Promise<AxiosResponse<Plantation>> => 
-    api.post<Plantation>('/plantations', data),
+  // Buscar por ID
+  getById: (id: number): Promise<AxiosResponse<SensorData>> => 
+    api.get<SensorData>(`/solo/${id}`),
   
-  update: (id: number, data: Partial<Plantation>): Promise<AxiosResponse<Plantation>> => 
-    api.put<Plantation>(`/plantations/${id}`, data),
+  // Atualizar registro
+  update: (id: number, data: Partial<SensorData>): Promise<AxiosResponse<SensorData>> => 
+    api.put<SensorData>(`/solo/${id}`, data),
   
+  // Deletar registro
   delete: (id: number): Promise<AxiosResponse<void>> => 
-    api.delete(`/plantations/${id}`),
-};
-
-// API para Alertas com tipagem completa
-export const alertAPI = {
-  getAll: (): Promise<AxiosResponse<Alert[]>> => api.get<Alert[]>('/alerts'),
+    api.delete(`/solo/${id}`),
   
-  getUnread: (): Promise<AxiosResponse<Alert[]>> => api.get<Alert[]>('/alerts/unread'),
-  
-  getById: (id: number): Promise<AxiosResponse<Alert>> => 
-    api.get<Alert>(`/alerts/${id}`),
-  
-  markAsRead: (id: number): Promise<AxiosResponse<void>> => 
-    api.patch(`/alerts/${id}/read`),
-  
-  create: (data: Omit<Alert, 'id' | 'createdAt' | 'read'>): Promise<AxiosResponse<Alert>> => 
-    api.post<Alert>('/alerts', data),
-};
-
-// API para Dados de Sensores com tipagem completa
-export const sensorAPI = {
+  // Última leitura
   getLatest: (): Promise<AxiosResponse<SensorData>> => 
-    api.get<SensorData>('/sensors/latest'),
+    api.get<SensorData>('/solo/ultima'),
   
+  // Histórico por período
   getHistory: (days: number = 7): Promise<AxiosResponse<SensorData[]>> => 
-    api.get<SensorData[]>(`/sensors/history?days=${days}`),
-  
-  getByPlantation: (plantationId: number): Promise<AxiosResponse<SensorData[]>> => 
-    api.get<SensorData[]>(`/sensors/plantation/${plantationId}`),
+    api.get<SensorData[]>(`/solo/historico?dias=${days}`),
 };
 
-// Função auxiliar para tratamento de erros com tipagem
+// ========== API DE PLANTAÇÕES ==========
+export const plantacaoAPI = {
+  // CREATE
+  create: (data: Omit<Plantation, 'id'>): Promise<AxiosResponse<Plantation>> => 
+    api.post<Plantation>('/plantacoes', data),
+  
+  // READ - todas
+  getAll: (): Promise<AxiosResponse<Plantation[]>> => 
+    api.get<Plantation[]>('/plantacoes'),
+  
+  // READ - por id
+  getById: (id: number): Promise<AxiosResponse<Plantation>> => 
+    api.get<Plantation>(`/plantacoes/${id}`),
+  
+  // UPDATE
+  update: (id: number, data: Partial<Plantation>): Promise<AxiosResponse<Plantation>> => 
+    api.put<Plantation>(`/plantacoes/${id}`, data),
+  
+  // DELETE
+  delete: (id: number): Promise<AxiosResponse<void>> => 
+    api.delete(`/plantacoes/${id}`),
+};
+
+// ========== API DE ALERTAS ==========
+export const alertaAPI = {
+  // CREATE
+  create: (data: Omit<Alert, 'id' | 'createdAt'>): Promise<AxiosResponse<Alert>> => 
+    api.post<Alert>('/alertas', data),
+  
+  // READ - todos
+  getAll: (): Promise<AxiosResponse<Alert[]>> => 
+    api.get<Alert[]>('/alertas'),
+  
+  // READ - não lidos
+  getUnread: (): Promise<AxiosResponse<Alert[]>> => 
+    api.get<Alert[]>('/alertas/nao-lidos'),
+  
+  // UPDATE - marcar como lido
+  markAsRead: (id: number): Promise<AxiosResponse<void>> => 
+    api.patch(`/alertas/${id}/marcar-lido`),
+  
+  // DELETE
+  delete: (id: number): Promise<AxiosResponse<void>> => 
+    api.delete(`/alertas/${id}`),
+};
+
+// Função auxiliar para tratar erros
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
-    if (axiosError.response?.data) {
-      const data = axiosError.response.data as { message?: string };
-      return data.message || 'Erro na comunicação com o servidor';
+    if (error.response?.data) {
+      const data = error.response.data as { mensagem?: string; message?: string };
+      return data.mensagem || data.message || 'Erro na comunicação com o servidor';
     }
-    if (axiosError.request) {
-      return 'Não foi possível conectar ao servidor. Verifique sua conexão.';
+    if (error.request) {
+      return 'Não foi possível conectar ao servidor. Verifique se o backend está rodando em http://localhost:8080';
     }
-    return axiosError.message || 'Erro desconhecido';
+    return error.message || 'Erro desconhecido';
   }
   return 'Ocorreu um erro inesperado';
 };
