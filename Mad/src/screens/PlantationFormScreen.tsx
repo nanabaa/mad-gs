@@ -1,4 +1,4 @@
-// src/screens/PlantationFormScreen.tsx
+// src/screens/PlantationFormScreen.tsx - Create/Update via API
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { createPlantation, updatePlantation, getPlantations, Plantation } from '../services/storage';
+import { plantacaoAPI, Plantation, handleApiError } from '../services/api';
 
 type RouteParams = {
   plantationId?: number;
@@ -39,18 +39,18 @@ export default function PlantationFormScreen() {
   const loadPlantation = async () => {
     setLoading(true);
     try {
-      const plantations = await getPlantations();
-      const plantation = plantations.find(p => p.id === plantationId);
-      if (plantation) {
-        setFormData({
-          name: plantation.name,
-          cropType: plantation.cropType,
-          area: plantation.area.toString(),
-          plantingDate: plantation.plantingDate.split('T')[0],
-        });
-      }
+      console.log(`📝 Carregando plantação ID: ${plantationId}`);
+      const response = await plantacaoAPI.getById(plantationId);
+      const plantation = response.data;
+      setFormData({
+        name: plantation.name,
+        cropType: plantation.cropType,
+        area: plantation.area.toString(),
+        plantingDate: plantation.plantingDate.split('T')[0],
+      });
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os dados da plantação');
+      console.error('❌ Erro ao carregar plantação:', error);
+      Alert.alert('Erro', handleApiError(error));
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -70,22 +70,27 @@ export default function PlantationFormScreen() {
         cropType: formData.cropType,
         area: parseFloat(formData.area),
         plantingDate: formData.plantingDate,
-        soilMoisture: Math.random() * 50 + 30,
-        temperature: Math.random() * 15 + 20,
+        soilMoisture: Math.random() * 50 + 30, // Simulado
+        temperature: Math.random() * 15 + 20,  // Simulado
         irrigationStatus: 'inactive' as const,
         lastIrrigation: new Date().toISOString(),
       };
 
       if (plantationId) {
-        await updatePlantation(plantationId, payload);
+        // UPDATE via API
+        console.log(`📝 Atualizando plantação ID: ${plantationId}`);
+        await plantacaoAPI.update(plantationId, payload);
         Alert.alert('Sucesso', 'Plantação atualizada com sucesso');
       } else {
-        await createPlantation(payload);
+        // CREATE via API
+        console.log('📝 Criando nova plantação');
+        await plantacaoAPI.create(payload);
         Alert.alert('Sucesso', 'Plantação cadastrada com sucesso');
       }
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar a plantação');
+      console.error('❌ Erro ao salvar:', error);
+      Alert.alert('Erro', handleApiError(error));
     } finally {
       setSaving(false);
     }
