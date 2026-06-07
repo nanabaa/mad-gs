@@ -1,4 +1,4 @@
-// src/screens/HomeScreen.tsx - Versão Corrigida com Tipagem
+// src/screens/HomeScreen.tsx - Usando API real
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -7,12 +7,12 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert as RNAlert,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
-import { sensorAPI, plantationAPI, SensorData, Plantation } from '../services/api';
+import { RootStackParamList } from '../types/navigation';
+import { plantacaoAPI, soloAPI, alertaAPI, Plantation, SensorData, handleApiError } from '../services/api';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -21,14 +21,6 @@ interface DashboardData {
   activePlantations: number;
   unreadAlerts: number;
   waterSaved: number;
-}
-
-// Interface para as props do StatCard
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  unit?: string;
-  color: string;
 }
 
 export default function HomeScreen() {
@@ -44,25 +36,30 @@ export default function HomeScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      const [sensorRes, plantationsRes] = await Promise.all([
-        sensorAPI.getLatest(),
-        plantationAPI.getAll(),
+      console.log('🔄 Buscando dados do dashboard...');
+      
+      // Busca dados das APIs
+      const [sensorRes, plantationsRes, alertsRes] = await Promise.all([
+        soloAPI.getLatest().catch(() => ({ data: null })),
+        plantacaoAPI.getAll(),
+        alertaAPI.getUnread().catch(() => ({ data: [] })),
       ]);
 
       const plantations: Plantation[] = plantationsRes.data;
       const activeCount = plantations.length;
       
-      // CORREÇÃO AQUI: Tipagem explícita do parâmetro 'p'
-      const waterSaved = plantations.filter((p: Plantation) => p.irrigationStatus === 'blocked').length * 150;
+      // Calcula água economizada (cada irrigação bloqueada economiza 150L)
+      const waterSaved = plantations.filter(p => p.irrigationStatus === 'blocked').length * 150;
 
       setDashboardData({
-        sensor: sensorRes.data,
+        sensor: sensorRes.data || null,
         activePlantations: activeCount,
-        unreadAlerts: 3,
+        unreadAlerts: alertsRes.data?.length || 0,
         waterSaved,
       });
     } catch (error) {
-      RNAlert.alert('Erro', 'Não foi possível carregar os dados do dashboard');
+      console.error('❌ Erro ao carregar dashboard:', error);
+      Alert.alert('Erro', handleApiError(error));
     } finally {
       setLoading(false);
     }
@@ -77,17 +74,6 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  // Componente StatCard com tipagem correta
-  const StatCard: React.FC<StatCardProps> = ({ title, value, unit, color }) => (
-    <View style={[styles.statCard, { borderTopColor: color }]}>
-      <Text style={styles.statTitle}>{title}</Text>
-      <Text style={[styles.statValue, { color }]}>
-        {value}
-        {unit && <Text style={styles.statUnit}>{unit}</Text>}
-      </Text>
-    </View>
-  );
 
   if (loading) {
     return (
@@ -147,22 +133,25 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.statsGrid}>
-        <StatCard
-          title="Plantações Ativas"
-          value={dashboardData.activePlantations}
-          color="#4CAF50"
-        />
-        <StatCard
-          title="Alertas Não Lidos"
-          value={dashboardData.unreadAlerts}
-          color="#FF9800"
-        />
-        <StatCard
-          title="Água Economizada"
-          value={dashboardData.waterSaved}
-          unit="L"
-          color="#2196F3"
-        />
+        <View style={[styles.statCard, { borderTopColor: '#4CAF50' }]}>
+          <Text style={styles.statTitle}>Plantações Ativas</Text>
+          <Text style={[styles.statValue, { color: '#4CAF50' }]}>
+            {dashboardData.activePlantations}
+          </Text>
+        </View>
+        <View style={[styles.statCard, { borderTopColor: '#FF9800' }]}>
+          <Text style={styles.statTitle}>Alertas Não Lidos</Text>
+          <Text style={[styles.statValue, { color: '#FF9800' }]}>
+            {dashboardData.unreadAlerts}
+          </Text>
+        </View>
+        <View style={[styles.statCard, { borderTopColor: '#2196F3' }]}>
+          <Text style={styles.statTitle}>Água Economizada</Text>
+          <Text style={[styles.statValue, { color: '#2196F3' }]}>
+            {dashboardData.waterSaved}
+            <Text style={styles.statUnit}>L</Text>
+          </Text>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>Ações Rápidas</Text>
@@ -288,10 +277,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderTopWidth: 3,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
   },
   statTitle: {
     fontSize: 11,
