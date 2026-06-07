@@ -1,4 +1,4 @@
-// src/screens/PlantationsScreen.tsx - Versão completamente reformulada
+// src/screens/PlantationsScreen.tsx - CRUD via API
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App';
-import { getPlantations, deletePlantation, Plantation } from '../services/storage';
+import { RootStackParamList } from '../types/navigation';
+import { plantacaoAPI, Plantation, handleApiError } from '../services/api';
 
 type PlantationsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Plantations'>;
 
@@ -25,13 +25,13 @@ export default function PlantationsScreen() {
 
   const fetchPlantations = useCallback(async () => {
     try {
-      console.log('🔄 Buscando plantações...');
-      const data = await getPlantations();
-      console.log('📊 Plantações carregadas:', data.length);
-      setPlantations(data);
+      console.log('🔄 Buscando plantações da API...');
+      const response = await plantacaoAPI.getAll();
+      console.log('📊 Resposta da API:', response.data);
+      setPlantations(response.data);
     } catch (error) {
       console.error('❌ Erro ao buscar plantações:', error);
-      Alert.alert('Erro', 'Não foi possível carregar as plantações');
+      Alert.alert('Erro', handleApiError(error));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -45,8 +45,6 @@ export default function PlantationsScreen() {
   );
 
   const handleDelete = async (id: number, name: string) => {
-    console.log('🗑️ Botão excluir pressionado para:', name, 'ID:', id);
-    
     Alert.alert(
       'Confirmar exclusão',
       `Tem certeza que deseja excluir a plantação "${name}"?`,
@@ -57,21 +55,14 @@ export default function PlantationsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🗑️ Executando exclusão...');
-              const success = await deletePlantation(id);
-              
-              if (success) {
-                console.log('✅ Exclusão bem sucedida');
-                // Atualiza a lista local imediatamente
-                setPlantations(prev => prev.filter(p => p.id !== id));
-                Alert.alert('Sucesso', 'Plantação excluída com sucesso');
-              } else {
-                console.log('❌ Falha na exclusão');
-                Alert.alert('Erro', 'Plantação não encontrada');
-              }
+              console.log(`🗑️ Excluindo plantação ID: ${id}`);
+              await plantacaoAPI.delete(id);
+              // Remove da lista local
+              setPlantations(prev => prev.filter(p => p.id !== id));
+              Alert.alert('Sucesso', 'Plantação excluída com sucesso');
             } catch (error) {
               console.error('❌ Erro na exclusão:', error);
-              Alert.alert('Erro', 'Não foi possível excluir a plantação');
+              Alert.alert('Erro', handleApiError(error));
             }
           },
         },
