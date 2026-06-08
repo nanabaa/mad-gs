@@ -1,4 +1,4 @@
-// src/services/api.ts - DELETE usando fetch com tipo correto
+// src/services/api.ts - Sem valores aleatórios
 import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // Base URL da API no Render
@@ -58,9 +58,11 @@ export interface LeituraSolo {
 }
 
 // Função para converter dados da API para o formato do frontend
+// SEM VALORES ALEATÓRIOS
 const converterParaFrontend = (apiData: LeituraSoloAPI): LeituraSolo => {
-  const humidity = 50 + Math.random() * 30;
-  const rainPrediction = 20 + Math.random() * 60;
+  // Valores fixos e lógicos baseados na umidade do solo
+  const humidity = Math.min(95, Math.max(30, apiData.umidade + 15));
+  const rainPrediction = Math.max(10, 70 - apiData.umidade);
   const irrigationRecommended = apiData.umidade < 40;
   
   return {
@@ -122,7 +124,7 @@ export const leituraAPI = {
     };
   },
   
-  // DELETE - Usando fetch com retorno compatível com AxiosResponse
+  // DELETE - Usando fetch
   delete: async (id: number): Promise<AxiosResponse<void>> => {
     console.log(`📡 [FETCH] Enviando DELETE para /solo/${id}`);
     
@@ -141,12 +143,11 @@ export const leituraAPI = {
         throw new Error(`HTTP ${response.status}`);
       }
       
-      // Criar um objeto compatível com AxiosResponse
       const axiosResponse: AxiosResponse<void> = {
         data: undefined,
         status: response.status,
         statusText: response.statusText,
-        headers: {} as any,
+        headers: {},
         config: {} as any,
       };
       

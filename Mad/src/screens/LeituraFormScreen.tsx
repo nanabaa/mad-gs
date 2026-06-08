@@ -139,26 +139,6 @@ export default function LeituraFormScreen() {
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>💨 Umidade do Ar (%)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.humidity}
-          onChangeText={(text) => setFormData({ ...formData, humidity: text })}
-          placeholder="Ex: 60"
-          keyboardType="numeric"
-          placeholderTextColor="#999"
-        />
-
-        <Text style={styles.label}>🌧️ Previsão de Chuva (%)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.satelliteRainPrediction}
-          onChangeText={(text) => setFormData({ ...formData, satelliteRainPrediction: text })}
-          placeholder="Ex: 30"
-          keyboardType="numeric"
-          placeholderTextColor="#999"
-        />
-
         <Text style={styles.label}>🆔 ID do Dispositivo</Text>
         <TextInput
           style={styles.input}
