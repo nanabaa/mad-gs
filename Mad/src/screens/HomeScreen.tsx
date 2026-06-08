@@ -1,4 +1,4 @@
-// src/screens/HomeScreen.tsx - Versão atualizada com a nova API
+// src/screens/HomeScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -12,68 +12,48 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
+import { RootStackParamList } from '../../App';
 import { 
-  getLatestSensorData, 
-  getPlantations, 
-  generateAlertsFromSatellite,
-  SensorData, 
-  Plantation,
+  getLatestLeitura, 
+  leituraAPI,
+  alertaAPI,
+  LeituraSolo, 
+  formatDate,
+  getMoistureColor,
+  getMoistureStatus,
   handleApiError 
 } from '../services/api';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-interface DashboardData {
-  sensor: SensorData | null;
-  activePlantations: number;
-  unreadAlerts: number;
-  waterSaved: number;
-  averageMoisture: number;
-}
-
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
-    sensor: null,
-    activePlantations: 0,
-    unreadAlerts: 0,
-    waterSaved: 0,
-    averageMoisture: 0,
-  });
+  const [latestLeitura, setLatestLeitura] = useState<LeituraSolo | null>(null);
+  const [totalLeituras, setTotalLeituras] = useState(0);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [averageMoisture, setAverageMoisture] = useState(0);
 
   const fetchDashboardData = async () => {
     try {
       console.log('🔄 Buscando dados do dashboard...');
       
-      // Busca dados das APIs e armazenamento local
-      const [latestSensor, plantations, alerts] = await Promise.all([
-        getLatestSensorData(),
-        getPlantations(),
-        generateAlertsFromSatellite(),
+      const [latest, allLeituras, alerts] = await Promise.all([
+        getLatestLeitura(),
+        leituraAPI.getAll(),
+        alertaAPI.getAll(),
       ]);
 
-      const activeCount = plantations.length;
+      setLatestLeitura(latest);
+      setTotalLeituras(allLeituras.data.length);
+      setUnreadAlerts(alerts.filter((a: any) => !a.read).length);
       
-      // Calcula água economizada (cada irrigação bloqueada economiza 150L)
-      const waterSaved = plantations.filter(p => p.irrigationStatus === 'blocked').length * 150;
-      
-      // Calcula umidade média
-      const avgMoisture = plantations.length > 0
-        ? plantations.reduce((sum, p) => sum + p.soilMoisture, 0) / plantations.length
+      const avgMoisture = allLeituras.data.length > 0
+        ? allLeituras.data.reduce((sum: number, item: LeituraSolo) => sum + item.soilMoisture, 0) / allLeituras.data.length
         : 0;
-
-      const unreadCount = alerts.filter(a => !a.read).length;
-
-      setDashboardData({
-        sensor: latestSensor,
-        activePlantations: activeCount,
-        unreadAlerts: unreadCount,
-        waterSaved,
-        averageMoisture: avgMoisture,
-      });
+      setAverageMoisture(avgMoisture);
+      
     } catch (error) {
       console.error('❌ Erro ao carregar dashboard:', error);
       Alert.alert('Erro', handleApiError(error));
@@ -92,13 +72,6 @@ export default function HomeScreen() {
     fetchDashboardData();
   }, []);
 
-  const getMoistureStatus = (moisture: number) => {
-    if (moisture < 30) return { text: 'Crítico', color: '#F44336' };
-    if (moisture < 50) return { text: 'Atenção', color: '#FF9800' };
-    if (moisture < 70) return { text: 'Ideal', color: '#4CAF50' };
-    return { text: 'Excesso', color: '#2196F3' };
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -108,7 +81,8 @@ export default function HomeScreen() {
     );
   }
 
-  const moistureStatus = getMoistureStatus(dashboardData.averageMoisture);
+  const moistureStatus = getMoistureStatus(averageMoisture);
+  const moistureColor = getMoistureColor(averageMoisture);
 
   return (
     <ScrollView
@@ -122,24 +96,24 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>Monitoramento Inteligente via Satélite</Text>
       </View>
 
-      {/* Card de Dados do Solo (API Real) */}
-      {dashboardData.sensor && (
+      {/* Última Leitura */}
+      {latestLeitura && (
         <View style={styles.sensorCard}>
           <Text style={styles.sensorTitle}>📡 Última Leitura do Solo</Text>
           <Text style={styles.sensorTimestamp}>
-            {new Date(dashboardData.sensor.timestamp).toLocaleString('pt-BR')}
+            {formatDate(latestLeitura.timestamp)}
           </Text>
           <View style={styles.sensorRow}>
             <View style={styles.sensorItem}>
               <Text style={styles.sensorLabel}>💧 Umidade do Solo</Text>
-              <Text style={styles.sensorValue}>
-                {dashboardData.sensor.soilMoisture}%
+              <Text style={[styles.sensorValue, { color: getMoistureColor(latestLeitura.soilMoisture) }]}>
+                {latestLeitura.soilMoisture}%
               </Text>
             </View>
             <View style={styles.sensorItem}>
               <Text style={styles.sensorLabel}>🌡️ Temperatura</Text>
               <Text style={styles.sensorValue}>
-                {dashboardData.sensor.temperature}°C
+                {latestLeitura.temperature}°C
               </Text>
             </View>
           </View>
@@ -147,13 +121,13 @@ export default function HomeScreen() {
             <View style={styles.sensorItem}>
               <Text style={styles.sensorLabel}>💨 Umidade do Ar</Text>
               <Text style={styles.sensorValue}>
-                {dashboardData.sensor.humidity}%
+                {latestLeitura.humidity}%
               </Text>
             </View>
             <View style={styles.sensorItem}>
               <Text style={styles.sensorLabel}>🌧️ Previsão de Chuva</Text>
               <Text style={styles.sensorValue}>
-                {dashboardData.sensor.satelliteRainPrediction}%
+                {latestLeitura.satelliteRainPrediction}%
               </Text>
             </View>
           </View>
@@ -161,9 +135,9 @@ export default function HomeScreen() {
             <Text style={styles.recommendationLabel}>🚰 Recomendação de Irrigação:</Text>
             <Text style={[
               styles.recommendationValue,
-              dashboardData.sensor.irrigationRecommended ? styles.recommendActive : styles.recommendBlocked
+              latestLeitura.irrigationRecommended ? styles.recommendActive : styles.recommendBlocked
             ]}>
-              {dashboardData.sensor.irrigationRecommended ? '✅ Irrigar agora' : '⛔ Bloquear irrigação (chuva prevista)'}
+              {latestLeitura.irrigationRecommended ? '✅ Irrigar agora' : '⛔ Bloquear irrigação'}
             </Text>
           </View>
         </View>
@@ -171,41 +145,49 @@ export default function HomeScreen() {
 
       {/* Cards de Estatísticas */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { borderTopColor: '#4CAF50' }]}>
-          <Text style={styles.statIcon}>🌱</Text>
-          <Text style={styles.statTitle}>Leituras do solo e plantações</Text>
+        <TouchableOpacity 
+          style={[styles.statCard, { borderTopColor: '#4CAF50' }]}
+          onPress={() => navigation.navigate('Leituras')}
+        >
+          <Text style={styles.statIcon}>📊</Text>
+          <Text style={styles.statTitle}>Total de Leituras</Text>
           <Text style={[styles.statValue, { color: '#4CAF50' }]}>
-            {dashboardData.activePlantations}
+            {totalLeituras}
           </Text>
-        </View>
+        </TouchableOpacity>
         
-        <View style={[styles.statCard, { borderTopColor: '#FF9800' }]}>
+        <TouchableOpacity 
+          style={[styles.statCard, { borderTopColor: '#FF9800' }]}
+          onPress={() => navigation.navigate('Alerts')}
+        >
           <Text style={styles.statIcon}>⚠️</Text>
           <Text style={styles.statTitle}>Alertas</Text>
           <Text style={[styles.statValue, { color: '#FF9800' }]}>
-            {dashboardData.unreadAlerts}
+            {unreadAlerts}
           </Text>
-        </View>
+        </TouchableOpacity>
         
-        <View style={[styles.statCard, { borderTopColor: '#2196F3' }]}>
-          <Text style={styles.statIcon}>💧</Text>
-          <Text style={styles.statTitle}>Água Economizada</Text>
+        <TouchableOpacity 
+          style={[styles.statCard, { borderTopColor: '#2196F3' }]}
+          onPress={() => navigation.navigate('HistoryReports')}
+        >
+          <Text style={styles.statIcon}>📈</Text>
+          <Text style={styles.statTitle}>Relatórios</Text>
           <Text style={[styles.statValue, { color: '#2196F3' }]}>
-            {dashboardData.waterSaved}
-            <Text style={styles.statUnit}>L</Text>
+            {">"}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Status da Umidade Média */}
       <View style={styles.moistureCard}>
-        <Text style={styles.moistureTitle}>📊 Umidade Média das Plantações</Text>
+        <Text style={styles.moistureTitle}>📊 Umidade Média das Leituras</Text>
         <View style={styles.moistureRow}>
-          <Text style={[styles.moisturePercentage, { color: moistureStatus.color }]}>
-            {dashboardData.averageMoisture.toFixed(1)}%
+          <Text style={[styles.moisturePercentage, { color: moistureColor }]}>
+            {averageMoisture.toFixed(1)}%
           </Text>
-          <Text style={[styles.moistureStatus, { color: moistureStatus.color }]}>
-            {moistureStatus.text}
+          <Text style={[styles.moistureStatus, { color: moistureColor }]}>
+            {moistureStatus.icon} {moistureStatus.text}
           </Text>
         </View>
         <View style={styles.progressBarContainer}>
@@ -213,8 +195,8 @@ export default function HomeScreen() {
             style={[
               styles.progressBar,
               {
-                width: `${Math.min(dashboardData.averageMoisture, 100)}%`,
-                backgroundColor: moistureStatus.color,
+                width: `${Math.min(averageMoisture, 100)}%`,
+                backgroundColor: moistureColor,
               },
             ]}
           />
@@ -226,10 +208,10 @@ export default function HomeScreen() {
       <View style={styles.actionsGrid}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('Plantations')}
+          onPress={() => navigation.navigate('Leituras')}
         >
-          <Text style={styles.actionIcon}>🌾</Text>
-          <Text style={styles.actionText}>Plantações</Text>
+          <Text style={styles.actionIcon}>📊</Text>
+          <Text style={styles.actionText}>Minhas Leituras</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -242,17 +224,17 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('PlantationForm', {})}
+          onPress={() => navigation.navigate('LeituraForm', {})}
         >
           <Text style={styles.actionIcon}>➕</Text>
-          <Text style={styles.actionText}>Nova</Text>
+          <Text style={styles.actionText}>Nova Leitura</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigation.navigate('HistoryReports')}
         >
-          <Text style={styles.actionIcon}>📊</Text>
+          <Text style={styles.actionIcon}>📈</Text>
           <Text style={styles.actionText}>Relatórios</Text>
         </TouchableOpacity>
       </View>
@@ -396,11 +378,6 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  statUnit: {
-    fontSize: 10,
-    fontWeight: 'normal',
-    color: '#999',
   },
   moistureCard: {
     backgroundColor: '#FFFFFF',

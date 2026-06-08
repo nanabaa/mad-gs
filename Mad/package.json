@@ -19,6 +19,7 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@tsconfig/react-native": "^3.0.9",
     "@types/axios": "^0.9.36",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"

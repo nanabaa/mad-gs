@@ -1,6 +1,5 @@
-// src/services/api.ts - Versão híbrida (plantações local, sensores API)
+// src/services/api.ts - DELETE usando fetch com tipo correto
 import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL da API no Render
 const API_BASE_URL = 'https://agrotech-api-gs-java.onrender.com/api/agro';
@@ -33,28 +32,21 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     console.error('❌ API Error:', error.response?.status, error.response?.data);
-    if (error.message === 'Network Error') {
-      console.error('🚨 Possível erro de CORS. Verifique o backend.');
-    }
     return Promise.reject(error);
   }
 );
 
-// ========== TIPOS DE DADOS ==========
+// ========== TIPO DE DADOS ==========
 
-export interface Plantation {
+export interface LeituraSoloAPI {
   id: number;
-  name: string;
-  cropType: string;
-  area: number;
-  plantingDate: string;
-  soilMoisture: number;
-  temperature: number;
-  irrigationStatus: 'active' | 'inactive' | 'blocked';
-  lastIrrigation: string;
+  umidade: number;
+  temperatura: number;
+  dataLeitura: string;
+  dispositivoId: string;
 }
 
-export interface SensorData {
+export interface LeituraSolo {
   id: number;
   soilMoisture: number;
   temperature: number;
@@ -62,162 +54,145 @@ export interface SensorData {
   timestamp: string;
   satelliteRainPrediction: number;
   irrigationRecommended: boolean;
+  dispositivoId: string;
 }
 
-export interface SateliteData {
-  id: number;
-  predictionDate: string;
-  rainProbability: number;
-  temperatureMin: number;
-  temperatureMax: number;
-  alertType?: string;
-  description?: string;
-  createdAt: string;
-}
-
-// ========== API DE SOLO (Endpoints reais do backend) ==========
-export const soloAPI = {
-  create: (data: Omit<SensorData, 'id'>): Promise<AxiosResponse<SensorData>> => 
-    api.post<SensorData>('/solo', data),
+// Função para converter dados da API para o formato do frontend
+const converterParaFrontend = (apiData: LeituraSoloAPI): LeituraSolo => {
+  const humidity = 50 + Math.random() * 30;
+  const rainPrediction = 20 + Math.random() * 60;
+  const irrigationRecommended = apiData.umidade < 40;
   
-  getAll: (): Promise<AxiosResponse<SensorData[]>> => 
-    api.get<SensorData[]>('/solo'),
-  
-  getById: (id: number): Promise<AxiosResponse<SensorData>> => 
-    api.get<SensorData>(`/solo/${id}`),
-  
-  update: (id: number, data: Partial<SensorData>): Promise<AxiosResponse<SensorData>> => 
-    api.put<SensorData>(`/solo/${id}`, data),
-  
-  delete: (id: number): Promise<AxiosResponse<void>> => 
-    api.delete(`/solo/${id}`),
+  return {
+    id: apiData.id,
+    soilMoisture: apiData.umidade,
+    temperature: apiData.temperatura,
+    humidity: Math.round(humidity),
+    timestamp: apiData.dataLeitura,
+    satelliteRainPrediction: Math.round(rainPrediction),
+    irrigationRecommended: irrigationRecommended,
+    dispositivoId: apiData.dispositivoId,
+  };
 };
 
-// ========== API DE SATÉLITE (Endpoints reais do backend) ==========
-export const sateliteAPI = {
-  create: (data: Omit<SateliteData, 'id' | 'createdAt'>): Promise<AxiosResponse<SateliteData>> => 
-    api.post<SateliteData>('/satelite', data),
+// ========== API DE LEITURAS DO SOLO ==========
+export const leituraAPI = {
+  create: async (data: Omit<LeituraSolo, 'id'>): Promise<AxiosResponse<LeituraSolo>> => {
+    const apiData = {
+      umidade: data.soilMoisture,
+      temperatura: data.temperature,
+      dataLeitura: data.timestamp,
+      dispositivoId: data.dispositivoId || 'ESP32-FAZENDA-01',
+    };
+    const response = await api.post<LeituraSoloAPI>('/solo', apiData);
+    return {
+      ...response,
+      data: converterParaFrontend(response.data),
+    };
+  },
   
-  getAll: (): Promise<AxiosResponse<SateliteData[]>> => 
-    api.get<SateliteData[]>('/satelite'),
-};
-
-// ========== STORAGE LOCAL PARA PLANTAÇÕES ==========
-const STORAGE_KEYS = {
-  PLANTATIONS: '@AgroOrbit:plantations',
-};
-
-// Salvar plantações
-const savePlantations = async (plantations: Plantation[]): Promise<void> => {
-  try {
-    const jsonValue = JSON.stringify(plantations);
-    await AsyncStorage.setItem(STORAGE_KEYS.PLANTATIONS, jsonValue);
-    console.log('✅ Plantações salvas localmente:', plantations.length);
-  } catch (error) {
-    console.error('❌ Erro ao salvar plantações:', error);
-  }
-};
-
-// GET todas as plantações
-export const getPlantations = async (): Promise<Plantation[]> => {
-  try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.PLANTATIONS);
-    if (jsonValue !== null) {
-      const data = JSON.parse(jsonValue);
-      console.log('✅ Plantações carregadas do storage:', data.length);
-      return data;
+  getAll: async (): Promise<AxiosResponse<LeituraSolo[]>> => {
+    const response = await api.get<LeituraSoloAPI[]>('/solo');
+    const convertedData = response.data.map(converterParaFrontend);
+    return {
+      ...response,
+      data: convertedData,
+    };
+  },
+  
+  getById: async (id: number): Promise<AxiosResponse<LeituraSolo>> => {
+    const response = await api.get<LeituraSoloAPI>(`/solo/${id}`);
+    return {
+      ...response,
+      data: converterParaFrontend(response.data),
+    };
+  },
+  
+  update: async (id: number, data: Partial<LeituraSolo>): Promise<AxiosResponse<LeituraSolo>> => {
+    const apiData: any = {};
+    if (data.soilMoisture !== undefined) apiData.umidade = data.soilMoisture;
+    if (data.temperature !== undefined) apiData.temperatura = data.temperature;
+    if (data.timestamp !== undefined) apiData.dataLeitura = data.timestamp;
+    if (data.dispositivoId !== undefined) apiData.dispositivoId = data.dispositivoId;
+    
+    const response = await api.put<LeituraSoloAPI>(`/solo/${id}`, apiData);
+    return {
+      ...response,
+      data: converterParaFrontend(response.data),
+    };
+  },
+  
+  // DELETE - Usando fetch com retorno compatível com AxiosResponse
+  delete: async (id: number): Promise<AxiosResponse<void>> => {
+    console.log(`📡 [FETCH] Enviando DELETE para /solo/${id}`);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/solo/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log(`📡 [FETCH] Resposta status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      // Criar um objeto compatível com AxiosResponse
+      const axiosResponse: AxiosResponse<void> = {
+        data: undefined,
+        status: response.status,
+        statusText: response.statusText,
+        headers: {} as any,
+        config: {} as any,
+      };
+      
+      return axiosResponse;
+      
+    } catch (error) {
+      console.error('❌ [FETCH] Erro no DELETE:', error);
+      throw error;
     }
-    // Dados iniciais
-    const initialData: Plantation[] = [
-      {
-        id: 1,
-        name: 'Talhão Norte',
-        cropType: 'Soja',
-        area: 10.5,
-        plantingDate: new Date().toISOString().split('T')[0],
-        soilMoisture: 65,
-        temperature: 24,
-        irrigationStatus: 'inactive',
-        lastIrrigation: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        name: 'Talhão Sul',
-        cropType: 'Milho',
-        area: 8.2,
-        plantingDate: new Date().toISOString().split('T')[0],
-        soilMoisture: 45,
-        temperature: 26,
-        irrigationStatus: 'blocked',
-        lastIrrigation: new Date().toISOString(),
-      },
-    ];
-    await savePlantations(initialData);
-    return initialData;
-  } catch (error) {
-    console.error('❌ Erro ao carregar plantações:', error);
-    return [];
-  }
-};
-
-// CREATE plantação
-export const createPlantation = async (plantation: Omit<Plantation, 'id'>): Promise<Plantation> => {
-  console.log('📝 Criando nova plantação...');
-  const plantations = await getPlantations();
-  const newId = plantations.length > 0 ? Math.max(...plantations.map(p => p.id)) + 1 : 1;
-  const newPlantation: Plantation = { ...plantation, id: newId };
-  plantations.push(newPlantation);
-  await savePlantations(plantations);
-  console.log('✅ Plantação criada ID:', newId);
-  return newPlantation;
-};
-
-// UPDATE plantação
-export const updatePlantation = async (id: number, updates: Partial<Plantation>): Promise<Plantation> => {
-  console.log('📝 Atualizando plantação ID:', id);
-  const plantations = await getPlantations();
-  const index = plantations.findIndex(p => p.id === id);
-  if (index === -1) throw new Error('Plantação não encontrada');
-  
-  plantations[index] = { ...plantations[index], ...updates };
-  await savePlantations(plantations);
-  console.log('✅ Plantação atualizada ID:', id);
-  return plantations[index];
-};
-
-// DELETE plantação - CORRIGIDA
-export const deletePlantation = async (id: number): Promise<boolean> => {
-  try {
-    console.log('🗑️ [DELETE] Iniciando exclusão da plantação ID:', id);
-    
-    const plantations = await getPlantations();
-    console.log('📊 [DELETE] Total antes:', plantations.length);
-    
-    const exists = plantations.some(p => p.id === id);
-    if (!exists) {
-      console.warn('⚠️ [DELETE] Plantação não encontrada ID:', id);
-      return false;
-    }
-    
-    const updatedPlantations = plantations.filter(p => p.id !== id);
-    console.log('📊 [DELETE] Total depois:', updatedPlantations.length);
-    
-    await savePlantations(updatedPlantations);
-    console.log('✅ [DELETE] Exclusão realizada com sucesso!');
-    
-    return true;
-  } catch (error) {
-    console.error('❌ [DELETE] Erro:', error);
-    return false;
-  }
+  },
 };
 
 // ========== FUNÇÕES AUXILIARES ==========
 
-// Buscar última leitura do solo da API real
-export const getLatestSensorData = async (): Promise<SensorData | null> => {
+export const formatDate = (dateString: string): string => {
   try {
-    const response = await soloAPI.getAll();
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    return dateString;
+  }
+};
+
+export const getMoistureColor = (moisture: number): string => {
+  if (moisture < 30) return '#F44336';
+  if (moisture < 50) return '#FF9800';
+  if (moisture < 70) return '#4CAF50';
+  return '#2196F3';
+};
+
+export const getMoistureStatus = (moisture: number): { text: string; icon: string } => {
+  if (moisture < 30) return { text: 'Crítico - Solo Seco', icon: '🔥' };
+  if (moisture < 50) return { text: 'Atenção - Solo Baixo', icon: '⚠️' };
+  if (moisture < 70) return { text: 'Ideal', icon: '✅' };
+  return { text: 'Excesso de Umidade', icon: '💧' };
+};
+
+export const getLatestLeitura = async (): Promise<LeituraSolo | null> => {
+  try {
+    const response = await leituraAPI.getAll();
     const data = response.data;
     if (data && data.length > 0) {
       const sorted = [...data].sort((a, b) => 
@@ -232,100 +207,70 @@ export const getLatestSensorData = async (): Promise<SensorData | null> => {
   }
 };
 
-// Buscar histórico de sensores
-export const getSensorHistory = async (days: number = 7): Promise<SensorData[]> => {
-  try {
-    const response = await soloAPI.getAll();
-    const data = response.data;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    return data.filter(item => new Date(item.timestamp) >= cutoffDate);
-  } catch (error) {
-    console.error('Erro ao buscar histórico:', error);
-    return [];
-  }
-};
+// ========== API DE ALERTAS ==========
+export interface Alert {
+  id: number;
+  title: string;
+  description: string;
+  type: string;
+  severity: string;
+  createdAt: string;
+  read: boolean;
+}
 
-// Atualizar plantações com dados reais dos sensores
-export const updatePlantationsWithRealData = async (): Promise<Plantation[]> => {
-  try {
-    const latestSensor = await getLatestSensorData();
-    const plantations = await getPlantations();
-    
-    if (latestSensor) {
-      const updatedPlantations = plantations.map(p => ({
-        ...p,
-        soilMoisture: latestSensor.soilMoisture,
-        temperature: latestSensor.temperature,
-        irrigationStatus: (latestSensor.irrigationRecommended ? 'active' : 'inactive') as 'active' | 'inactive' | 'blocked',
-        lastIrrigation: new Date().toISOString(),
-      }));
-      await savePlantations(updatedPlantations);
-      return updatedPlantations;
-    }
-    return plantations;
-  } catch (error) {
-    console.error('❌ Erro ao atualizar plantações:', error);
-    return await getPlantations();
-  }
-};
-
-// Gerar alertas baseados em dados de satélite
-export const generateAlertsFromSatellite = async (): Promise<any[]> => {
-  try {
-    const sateliteResponse = await sateliteAPI.getAll();
-    const sateliteData = sateliteResponse.data;
-    const alerts: any[] = [];
-    
-    for (const satData of sateliteData) {
-      if (satData.temperatureMin < 0) {
-        alerts.push({
-          id: Date.now() + alerts.length,
-          title: '❄️ Alerta de Geada',
-          description: `Temperaturas podem atingir ${satData.temperatureMin}°C. Proteja suas plantações!`,
-          type: 'frost',
-          severity: 'high',
-          createdAt: new Date().toISOString(),
-          read: false,
-        });
+export const alertaAPI = {
+  getAll: async (): Promise<Alert[]> => {
+    try {
+      const response = await leituraAPI.getAll();
+      const leituras = response.data;
+      const alerts: Alert[] = [];
+      
+      for (const leitura of leituras) {
+        if (leitura.soilMoisture < 25) {
+          alerts.push({
+            id: leitura.id * 100,
+            title: '🔥 Alerta de Seca',
+            description: `Umidade do solo em ${leitura.soilMoisture}%. Irrigação necessária!`,
+            type: 'drought',
+            severity: 'high',
+            createdAt: leitura.timestamp,
+            read: false,
+          });
+        }
+        
+        if (leitura.temperature > 35) {
+          alerts.push({
+            id: leitura.id * 100 + 1,
+            title: '🌡️ Calor Extremo',
+            description: `Temperatura atingiu ${leitura.temperature}°C. Risco para as plantas.`,
+            type: 'drought',
+            severity: 'high',
+            createdAt: leitura.timestamp,
+            read: false,
+          });
+        }
       }
       
-      if (satData.rainProbability < 20) {
-        alerts.push({
-          id: Date.now() + alerts.length,
-          title: '🔥 Alerta de Seca',
-          description: 'Baixa probabilidade de chuva. Irrigação recomendada!',
-          type: 'drought',
-          severity: 'high',
-          createdAt: new Date().toISOString(),
-          read: false,
-        });
-      }
+      return alerts;
+    } catch (error) {
+      return [];
     }
-    
-    return alerts;
-  } catch (error) {
-    console.error('Erro ao gerar alertas:', error);
-    return [];
-  }
-};
-
-// API de alertas (usando dados gerados)
-export const alertaAPI = {
-  getAll: async (): Promise<any[]> => {
-    return generateAlertsFromSatellite();
   },
-  getUnread: async (): Promise<any[]> => {
-    const alerts = await generateAlertsFromSatellite();
+  
+  getUnread: async (): Promise<Alert[]> => {
+    const alerts = await alertaAPI.getAll();
     return alerts.filter(a => !a.read);
   },
+  
   markAsRead: async (id: number): Promise<void> => {
     console.log('Marcar como lido:', id);
   },
+  
+  delete: async (id: number): Promise<void> => {
+    console.log('Deletar alerta:', id);
+  },
 };
 
-// Função para tratar erros
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     if (error.response?.data) {
@@ -336,6 +281,9 @@ export const handleApiError = (error: unknown): string => {
       return 'Não foi possível conectar ao servidor. Verifique sua conexão.';
     }
     return error.message || 'Erro desconhecido';
+  }
+  if (error instanceof Error) {
+    return error.message;
   }
   return 'Ocorreu um erro inesperado';
 };

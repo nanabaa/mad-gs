@@ -6,18 +6,18 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Telas
-import HomeScreen from './src/screens/HomePage';
-import PlantationsScreen from './src/screens/PlantationsScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import LeiturasScreen from './src/screens/LeiturasScreen';
 import AlertsScreen from './src/screens/AlertsScreen';
-import PlantationFormScreen from './src/screens/PlantationFormScreen';
+import LeituraFormScreen from './src/screens/LeituraFormScreen';
 import HistoryReportsScreen from './src/screens/HistoryReportsScreen';
 
 // Exportando o tipo corretamente
 export type RootStackParamList = {
   Home: undefined;
-  Plantations: undefined;
+  Leituras: undefined;
   Alerts: undefined;
-  PlantationForm: { plantationId?: number };
+  LeituraForm: { leituraId?: number };
   HistoryReports: undefined;
 };
 
@@ -26,7 +26,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Home"
@@ -43,27 +43,27 @@ export default function App() {
           <Stack.Screen 
             name="Home" 
             component={HomeScreen} 
-            options={{ title: 'AgroOrbit Link' }}
+            options={{ title: '🌾 AgroOrbit Link' }}
           />
           <Stack.Screen 
-            name="Plantations" 
-            component={PlantationsScreen} 
-            options={{ title: 'Minhas Plantações' }}
+            name="Leituras" 
+            component={LeiturasScreen} 
+            options={{ title: '📊 Minhas Leituras' }}
           />
           <Stack.Screen 
             name="Alerts" 
             component={AlertsScreen} 
-            options={{ title: 'Alertas Preditivos' }}
+            options={{ title: '⚠️ Alertas Preditivos' }}
           />
           <Stack.Screen 
-            name="PlantationForm" 
-            component={PlantationFormScreen} 
-            options={{ title: 'Cadastrar Plantação' }}
+            name="LeituraForm" 
+            component={LeituraFormScreen} 
+            options={{ title: '📝 Nova Leitura' }}
           />
           <Stack.Screen 
             name="HistoryReports" 
             component={HistoryReportsScreen} 
-            options={{ title: 'Histórico e Relatórios' }}
+            options={{ title: '📈 Histórico e Relatórios' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
