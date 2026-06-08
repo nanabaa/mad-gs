@@ -228,76 +228,7 @@ export default function HistoryReportsScreen() {
         </View>
       </View>
 
-      {/* Plantações Cadastradas */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📋 Plantações Cadastradas</Text>
-        {plantations.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Nenhuma plantação cadastrada</Text>
-          </View>
-        ) : (
-          plantations.map((plantation) => (
-            <View key={plantation.id} style={styles.plantationReportCard}>
-              <View style={styles.plantationHeader}>
-                <Text style={styles.plantationName}>{plantation.name}</Text>
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor:
-                        plantation.irrigationStatus === 'active'
-                          ? '#4CAF50'
-                          : plantation.irrigationStatus === 'blocked'
-                          ? '#F44336'
-                          : '#9E9E9E',
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.plantationDetails}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>🌾 Cultura:</Text>
-                  <Text style={styles.detailValue}>{plantation.cropType}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>📐 Área:</Text>
-                  <Text style={styles.detailValue}>{plantation.area} ha</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>💧 Umidade:</Text>
-                  <Text style={styles.detailValue}>{plantation.soilMoisture}%</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>🌡️ Temperatura:</Text>
-                  <Text style={styles.detailValue}>{plantation.temperature}°C</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>🚰 Status Irrigação:</Text>
-                  <Text
-                    style={[
-                      styles.detailValue,
-                      {
-                        color:
-                          plantation.irrigationStatus === 'active'
-                            ? '#4CAF50'
-                            : plantation.irrigationStatus === 'blocked'
-                            ? '#F44336'
-                            : '#666',
-                      },
-                    ]}
-                  >
-                    {plantation.irrigationStatus === 'active'
-                      ? '✅ Ativa'
-                      : plantation.irrigationStatus === 'blocked'
-                      ? '⛔ Bloqueada (Chuva)'
-                      : '⏸️ Inativa'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
+
 
       {/* Histórico de Leituras */}
       <View style={styles.section}>
