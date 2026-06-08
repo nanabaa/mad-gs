@@ -1,4 +1,4 @@
-// src/screens/HistoryReportsScreen.tsx - Versão corrigida com a nova API
+// src/screens/HistoryReportsScreen.tsx - Versão ajustada (usando apenas leituraAPI)
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,11 +11,11 @@ import {
   Alert,
 } from 'react-native';
 import { 
-  soloAPI, 
-  getPlantations, 
-  getSensorHistory,
-  SensorData, 
-  Plantation,
+  leituraAPI, 
+  LeituraSolo, 
+  formatDate, 
+  getMoistureColor, 
+  getMoistureStatus,
   handleApiError 
 } from '../services/api';
 
@@ -27,12 +27,17 @@ interface ReportData {
   totalReadings: number;
 }
 
+interface Plantation {
+  id: number;
+  name: string;
+  irrigationStatus: 'active' | 'blocked' | 'maintenance';
+}
+
 export default function HistoryReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('week');
-  const [sensorHistory, setSensorHistory] = useState<SensorData[]>([]);
-  const [plantations, setPlantations] = useState<Plantation[]>([]);
+  const [sensorHistory, setSensorHistory] = useState<LeituraSolo[]>([]);
   const [reportData, setReportData] = useState<ReportData>({
     totalWaterSaved: 0,
     averageMoisture: 0,
@@ -46,37 +51,52 @@ export default function HistoryReportsScreen() {
       const daysMap = { week: 7, month: 30, year: 365 };
       const days = daysMap[selectedPeriod];
       
-      console.log(`🔄 Buscando histórico dos últimos ${days} dias...`);
+      console.log(`Buscando histórico dos últimos ${days} dias...`);
       
-      // Busca histórico de sensores e plantações
-      const [historyData, plantationsData] = await Promise.all([
-        getSensorHistory(days),
-        getPlantations(),
-      ]);
-
-      setSensorHistory(historyData);
-      setPlantations(plantationsData);
-
-      // Calcular relatórios
-      const blockedCount = plantationsData.filter(
-        (p: Plantation) => p.irrigationStatus === 'blocked'
+      // Buscar todas as leituras da API
+      const response = await leituraAPI.getAll();
+      const allReadings = response.data;
+      
+      // Filtrar leituras dos últimos 'days' dias
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      const filteredReadings = allReadings.filter(reading => {
+        const readingDate = new Date(reading.timestamp);
+        return readingDate >= cutoffDate;
+      });
+      
+      // Ordenar da mais recente para a mais antiga
+      const sortedReadings = filteredReadings.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      
+      setSensorHistory(sortedReadings);
+      
+      // Calcular umidade média
+      const avgMoisture = sortedReadings.length > 0
+        ? sortedReadings.reduce((sum, item) => sum + item.soilMoisture, 0) / sortedReadings.length
+        : 0;
+      
+      // Calcular irrigações bloqueadas (quando irrigationRecommended = false)
+      const blockedCount = sortedReadings.filter(
+        reading => !reading.irrigationRecommended
       ).length;
       
-      const avgMoisture = historyData.length > 0
-        ? historyData.reduce((sum: number, item: SensorData) => sum + item.soilMoisture, 0) / historyData.length
-        : 0;
-
       // Cada irrigação bloqueada economiza aproximadamente 150 litros
       const waterSaved = blockedCount * 150;
       const estimatedSaving = waterSaved * 2.5; // R$ 2.50 por 1000 litros economizados
-
+      
       setReportData({
         totalWaterSaved: waterSaved,
         averageMoisture: avgMoisture,
         totalIrrigationBlocks: blockedCount,
         estimatedSaving: estimatedSaving,
-        totalReadings: historyData.length,
+        totalReadings: sortedReadings.length,
       });
+      
+      console.log(`📊 Relatório gerado: ${sortedReadings.length} leituras, ${blockedCount} bloqueios`);
+      
     } catch (error) {
       console.error('❌ Erro ao carregar dados históricos:', error);
       Alert.alert('Erro', handleApiError(error));
@@ -96,19 +116,10 @@ export default function HistoryReportsScreen() {
   }, [selectedPeriod]);
 
   const getAverageMoistureStatus = (moisture: number) => {
-    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#F44336', icon: '🔥' };
-    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#FF9800', icon: '⚠️' };
-    if (moisture < 70) return { text: 'Ideal', color: '#4CAF50', icon: '✅' };
-    return { text: 'Excesso de umidade', color: '#2196F3', icon: '💧' };
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#c53d3d', icon: '' };
+    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#d28e28', icon: '' };
+    if (moisture < 70) return { text: 'Ideal', color: '#3c885b', icon: '' };
+    return { text: 'Excesso de umidade', color: '#5668c4', icon: '' };
   };
 
   const PeriodButton = ({ period, label }: { period: 'week' | 'month' | 'year'; label: string }) => (
@@ -138,7 +149,7 @@ export default function HistoryReportsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2E7D32" />
+        <ActivityIndicator size="large" color="#0e5612" />
         <Text style={styles.loadingText}>Carregando relatórios...</Text>
       </View>
     );
@@ -150,11 +161,11 @@ export default function HistoryReportsScreen() {
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0e5612']} />
       }
     >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📊 Histórico e Relatórios</Text>
+        <Text style={styles.headerTitle}>Histórico e Relatórios</Text>
         <Text style={styles.headerSubtitle}>
           Análise completa do seu sistema de irrigação
         </Text>
@@ -168,39 +179,39 @@ export default function HistoryReportsScreen() {
 
       {/* Cards de Estatísticas */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💰 Economia e Sustentabilidade</Text>
+        <Text style={styles.sectionTitle}>Economia e Sustentabilidade</Text>
         <StatCard
           icon="💧"
           title="Água Economizada"
           value={reportData.totalWaterSaved}
           unit=" L"
-          color="#2196F3"
+          color="#5668c4"
         />
         <StatCard
           icon="💰"
           title="Economia Estimada"
           value={`R$ ${reportData.estimatedSaving.toFixed(2)}`}
-          color="#4CAF50"
+          color="#afa34c"
         />
         <StatCard
           icon="🚫"
           title="Irrigações Bloqueadas"
           value={reportData.totalIrrigationBlocks}
           unit=" vezes"
-          color="#FF9800"
+          color="#c53d3d"
         />
         <StatCard
           icon="📈"
           title="Total de Leituras"
           value={reportData.totalReadings}
           unit=" registros"
-          color="#9C27B0"
+          color="#3c885b"
         />
       </View>
 
       {/* Saúde do Solo */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🌱 Saúde do Solo</Text>
+        <Text style={styles.sectionTitle}>Saúde do Solo</Text>
         <View style={styles.moistureCard}>
           <View style={styles.moistureHeader}>
             <Text style={styles.moistureTitle}>Umidade Média do Solo</Text>
@@ -228,11 +239,9 @@ export default function HistoryReportsScreen() {
         </View>
       </View>
 
-
-
       {/* Histórico de Leituras */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📈 Histórico de Leituras</Text>
+        <Text style={styles.sectionTitle}>Histórico de Leituras</Text>
         {sensorHistory.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>Nenhuma leitura disponível no período</Text>
@@ -247,8 +256,8 @@ export default function HistoryReportsScreen() {
                     styles.irrigationBadge,
                     {
                       backgroundColor: reading.irrigationRecommended
-                        ? '#4CAF50'
-                        : '#F44336',
+                        ? '#3c885b'
+                        : '#c53d3d',
                     },
                   ]}
                 >
@@ -282,7 +291,7 @@ export default function HistoryReportsScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          🌾 AgroOrbit Link - Agricultura de Precisão com Dados Orbitais
+          AgroOrbit Link - Agricultura de Precisão com Dados Orbitais
         </Text>
         <Text style={styles.footerSubtext}>
           Dados integrados com satélites NASA/ESA
@@ -306,7 +315,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#2E7D32',
+    color: '#064a09',
   },
   header: {
     backgroundColor: '#2E7D32',
@@ -433,49 +442,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 4,
-  },
-  plantationReportCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    elevation: 2,
-  },
-  plantationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-  plantationName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  plantationDetails: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: '#666',
-  },
-  detailValue: {
-    fontSize: 13,
-    color: '#333',
-    fontWeight: '500',
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',

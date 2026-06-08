@@ -116,10 +116,10 @@ export default function LeituraFormScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.formCard}>
         <Text style={styles.title}>
-          {leituraId && leituraId > 0 ? '📝 Editar Leitura' : '➕ Nova Leitura'}
+          {leituraId && leituraId > 0 ? '📝 Editar Leitura' : 'Nova Leitura'}
         </Text>
 
-        <Text style={styles.label}>💧 Umidade do Solo (%) *</Text>
+        <Text style={styles.label}>Umidade do Solo (%) *</Text>
         <TextInput
           style={styles.input}
           value={formData.soilMoisture}
@@ -129,7 +129,7 @@ export default function LeituraFormScreen() {
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>🌡️ Temperatura (°C) *</Text>
+        <Text style={styles.label}>Temperatura (°C) *</Text>
         <TextInput
           style={styles.input}
           value={formData.temperature}
@@ -139,7 +139,7 @@ export default function LeituraFormScreen() {
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>🆔 ID do Dispositivo</Text>
+        <Text style={styles.label}>ID do Dispositivo</Text>
         <TextInput
           style={styles.input}
           value={formData.dispositivoId}
@@ -149,7 +149,7 @@ export default function LeituraFormScreen() {
         />
 
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>🚰 Recomendação de Irrigação</Text>
+          <Text style={styles.switchLabel}>Recomendação de Irrigação</Text>
           <Switch
             value={formData.irrigationRecommended}
             onValueChange={(value) => setFormData({ ...formData, irrigationRecommended: value })}
@@ -164,13 +164,13 @@ export default function LeituraFormScreen() {
           disabled={saving}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? '💾 Salvando...' : (leituraId && leituraId > 0) ? '📝 Atualizar' : '✅ Cadastrar'}
+            {saving ? '💾 Salvando...' : (leituraId && leituraId > 0) ? '📝 Atualizar' : 'Cadastrar'}
           </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>📡 Sobre as Leituras</Text>
+        <Text style={styles.infoTitle}>Sobre as Leituras</Text>
         <Text style={styles.infoText}>
           • Umidade do solo: valores entre 0-100%{'\n'}
           • Temperatura: em graus Celsius{'\n'}

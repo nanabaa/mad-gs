@@ -32,7 +32,7 @@ export default function App() {
           initialRouteName="Home"
           screenOptions={{
             headerStyle: {
-              backgroundColor: '#2E7D32',
+              backgroundColor: '#0a460d',
             },
             headerTintColor: '#FFFFFF',
             headerTitleStyle: {
@@ -43,27 +43,27 @@ export default function App() {
           <Stack.Screen 
             name="Home" 
             component={HomeScreen} 
-            options={{ title: '🌾 AgroOrbit Link' }}
+            options={{ title: 'AgroOrbit Link' }}
           />
           <Stack.Screen 
             name="Leituras" 
             component={LeiturasScreen} 
-            options={{ title: '📊 Minhas Leituras' }}
+            options={{ title: 'Minhas Leituras' }}
           />
           <Stack.Screen 
             name="Alerts" 
             component={AlertsScreen} 
-            options={{ title: '⚠️ Alertas Preditivos' }}
+            options={{ title: 'Alertas Preditivos' }}
           />
           <Stack.Screen 
             name="LeituraForm" 
             component={LeituraFormScreen} 
-            options={{ title: '📝 Nova Leitura' }}
+            options={{ title: 'Nova Leitura' }}
           />
           <Stack.Screen 
             name="HistoryReports" 
             component={HistoryReportsScreen} 
-            options={{ title: '📈 Histórico e Relatórios' }}
+            options={{ title: 'Histórico e Relatórios' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

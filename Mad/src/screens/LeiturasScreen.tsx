@@ -34,9 +34,9 @@ export default function LeiturasScreen() {
 
   const fetchLeituras = useCallback(async () => {
     try {
-      console.log('🔄 Buscando leituras da API...');
+      console.log('Buscando leituras da API...');
       const response = await leituraAPI.getAll();
-      console.log('📊 Leituras carregadas:', response.data.length);
+      console.log('Leituras carregadas:', response.data.length);
       setLeituras(response.data);
     } catch (error) {
       console.error('❌ Erro ao buscar leituras:', error);
@@ -106,9 +106,9 @@ export default function LeiturasScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>📊 Leitura #{item.id}</Text>
+            <Text style={styles.cardTitle}>Leitura #{item.id}</Text>
             <View style={[styles.irrigationBadge, { 
-              backgroundColor: item.irrigationRecommended ? '#4CAF50' : '#F44336' 
+              backgroundColor: item.irrigationRecommended ? '#3c885b' : '#c53d3d' 
             }]}>
               <Text style={styles.irrigationText}>
                 {item.irrigationRecommended ? '💧 Irrigar' : '⛔ Bloquear'}
@@ -118,24 +118,24 @@ export default function LeiturasScreen() {
 
           <View style={styles.sensorGrid}>
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>💧 Umidade Solo</Text>
+              <Text style={styles.sensorLabel}>Umidade Solo</Text>
               <Text style={[styles.sensorValue, { color: moistureColor }]}>
                 {item.soilMoisture}%
               </Text>
             </View>
             
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>🌡️ Temperatura</Text>
+              <Text style={styles.sensorLabel}>Temperatura</Text>
               <Text style={styles.sensorValue}>{item.temperature}°C</Text>
             </View>
             
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>💨 Umidade Ar</Text>
+              <Text style={styles.sensorLabel}>Umidade Ar</Text>
               <Text style={styles.sensorValue}>{item.humidity}%</Text>
             </View>
             
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>🌧️ Previsão Chuva</Text>
+              <Text style={styles.sensorLabel}>Previsão Chuva</Text>
               <Text style={styles.sensorValue}>{item.satelliteRainPrediction}%</Text>
             </View>
           </View>
@@ -159,10 +159,10 @@ export default function LeiturasScreen() {
 
           <View style={styles.cardFooter}>
             <Text style={styles.timestamp}>
-              🕐 {formatDate(item.timestamp)}
+              {formatDate(item.timestamp)}
             </Text>
             <Text style={styles.deviceId}>
-              📱 {item.dispositivoId || 'ESP32-FAZENDA-01'}
+              {item.dispositivoId || 'ESP32-FAZENDA-01'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -173,7 +173,7 @@ export default function LeiturasScreen() {
           onPress={() => DeleteWithFetch(item.id)}
           activeOpacity={0.7}
         >
-          <Text style={styles.testText}>DELETE</Text>
+          <Text style={styles.testText}>Deletar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -194,7 +194,7 @@ export default function LeiturasScreen() {
         style={styles.addButton}
         onPress={() => navigation.navigate('LeituraForm', {})}
       >
-        <Text style={styles.addButtonText}>+ Nova Leitura</Text>
+        <Text style={styles.addButtonText}>Nova Leitura</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -206,10 +206,10 @@ export default function LeiturasScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📡</Text>
+            <Text style={styles.emptyIcon}></Text>
             <Text style={styles.emptyText}>Nenhuma leitura encontrada</Text>
             <Text style={styles.emptySubtext}>
-              Toque em "+ Nova Leitura" para adicionar dados do sensor
+              Toque em "Nova Leitura" para adicionar dados do sensor
             </Text>
           </View>
         }
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   testButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#c53d3d',
     paddingVertical: 10,
     alignItems: 'center',
     borderTopWidth: 1,

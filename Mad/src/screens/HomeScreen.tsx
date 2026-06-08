@@ -92,26 +92,26 @@ export default function HomeScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>🌾 Bem-vindo, Agricultor!</Text>
+        <Text style={styles.welcomeText}>Bem-vindo, Agricultor!</Text>
         <Text style={styles.subtitle}>Monitoramento Inteligente via Satélite</Text>
       </View>
 
       {/* Última Leitura */}
       {latestLeitura && (
         <View style={styles.sensorCard}>
-          <Text style={styles.sensorTitle}>📡 Última Leitura do Solo</Text>
+          <Text style={styles.sensorTitle}>Última Leitura do Solo</Text>
           <Text style={styles.sensorTimestamp}>
             {formatDate(latestLeitura.timestamp)}
           </Text>
           <View style={styles.sensorRow}>
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>💧 Umidade do Solo</Text>
+              <Text style={styles.sensorLabel}>Umidade do Solo</Text>
               <Text style={[styles.sensorValue, { color: getMoistureColor(latestLeitura.soilMoisture) }]}>
                 {latestLeitura.soilMoisture}%
               </Text>
             </View>
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>🌡️ Temperatura</Text>
+              <Text style={styles.sensorLabel}>Temperatura</Text>
               <Text style={styles.sensorValue}>
                 {latestLeitura.temperature}°C
               </Text>
@@ -119,20 +119,20 @@ export default function HomeScreen() {
           </View>
           <View style={styles.sensorRow}>
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>💨 Umidade do Ar</Text>
+              <Text style={styles.sensorLabel}>Umidade do Ar</Text>
               <Text style={styles.sensorValue}>
                 {latestLeitura.humidity}%
               </Text>
             </View>
             <View style={styles.sensorItem}>
-              <Text style={styles.sensorLabel}>🌧️ Previsão de Chuva</Text>
+              <Text style={styles.sensorLabel}>Previsão de Chuva</Text>
               <Text style={styles.sensorValue}>
                 {latestLeitura.satelliteRainPrediction}%
               </Text>
             </View>
           </View>
           <View style={styles.irrigationRecommendation}>
-            <Text style={styles.recommendationLabel}>🚰 Recomendação de Irrigação:</Text>
+            <Text style={styles.recommendationLabel}>Recomendação de Irrigação:</Text>
             <Text style={[
               styles.recommendationValue,
               latestLeitura.irrigationRecommended ? styles.recommendActive : styles.recommendBlocked
@@ -146,12 +146,12 @@ export default function HomeScreen() {
       {/* Cards de Estatísticas */}
       <View style={styles.statsGrid}>
         <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: '#4CAF50' }]}
+          style={[styles.statCard, { borderTopColor: '#3c885b' }]}
           onPress={() => navigation.navigate('Leituras')}
         >
           <Text style={styles.statIcon}>📊</Text>
           <Text style={styles.statTitle}>Total de Leituras</Text>
-          <Text style={[styles.statValue, { color: '#4CAF50' }]}>
+          <Text style={[styles.statValue, { color: '#3c885b' }]}>
             {totalLeituras}
           </Text>
         </TouchableOpacity>
@@ -159,12 +159,12 @@ export default function HomeScreen() {
         
         
         <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: '#2196F3' }]}
+          style={[styles.statCard, { borderTopColor: '#3c885b' }]}
           onPress={() => navigation.navigate('HistoryReports')}
         >
           <Text style={styles.statIcon}>📈</Text>
           <Text style={styles.statTitle}>Relatórios</Text>
-          <Text style={[styles.statValue, { color: '#2196F3' }]}>
+          <Text style={[styles.statValue, { color: '#3c885b' }]}>
             {">"}
           </Text>
         </TouchableOpacity>
@@ -172,7 +172,7 @@ export default function HomeScreen() {
 
       {/* Status da Umidade Média */}
       <View style={styles.moistureCard}>
-        <Text style={styles.moistureTitle}>📊 Umidade Média das Leituras</Text>
+        <Text style={styles.moistureTitle}>Umidade Média das Leituras</Text>
         <View style={styles.moistureRow}>
           <Text style={[styles.moisturePercentage, { color: moistureColor }]}>
             {averageMoisture.toFixed(1)}%
@@ -195,7 +195,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Ações Rápidas */}
-      <Text style={styles.sectionTitle}>⚡ Ações Rápidas</Text>
+      <Text style={styles.sectionTitle}>Ações Rápidas</Text>
       <View style={styles.actionsGrid}>
         <TouchableOpacity
           style={styles.actionButton}
@@ -232,14 +232,14 @@ export default function HomeScreen() {
 
       {/* Informações de Satélite */}
       <View style={styles.satelliteInfo}>
-        <Text style={styles.satelliteTitle}>🛰️ Integração com Satélites</Text>
+        <Text style={styles.satelliteTitle}>Integração com Satélites</Text>
         <Text style={styles.satelliteText}>
           Dados integrados com constelações NASA/ESA para previsão de microclimas, 
           alertas de geada e otimização inteligente de irrigação.
         </Text>
         <View style={styles.satelliteBadge}>
-          <Text style={styles.badgeText}>🌍 NASA EARTHDATA</Text>
-          <Text style={styles.badgeText}>🛰️ ESA SENTINEL</Text>
+          <Text style={styles.badgeText}>NASA EARTHDATA</Text>
+          <Text style={styles.badgeText}>ESA SENTINEL</Text>
         </View>
       </View>
     </ScrollView>
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   satelliteInfo: {
-    backgroundColor: '#E8EAF6',
+    backgroundColor: '#E8F5E9',
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   satelliteTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3949AB',
+    color: '#2E7D32',
     marginBottom: 8,
   },
   satelliteText: {
@@ -466,8 +466,8 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#3949AB',
-    backgroundColor: '#C5CAE9',
+    color: '#2E7D32',
+    backgroundColor: '#C8E6C9',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,

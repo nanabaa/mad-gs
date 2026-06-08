@@ -84,9 +84,9 @@ export default function AlertsScreen() {
 
   const getSeverityColor = (severity: string): string => {
     switch (severity) {
-      case 'high': return '#F44336';
-      case 'medium': return '#FF9800';
-      case 'low': return '#4CAF50';
+      case 'high': return '#c53d3d';
+      case 'medium': return '#d28e28';
+      case 'low': return '#3c885b';
       default: return '#666';
     }
   };
@@ -133,7 +133,7 @@ export default function AlertsScreen() {
   const showAlertDetails = (alert: AlertData) => {
     Alert.alert(
       alert.title,
-      `${alert.description}\n\n📋 Tipo: ${getTypeText(alert.type)}\n⚡ ${getSeverityText(alert.severity)}\n📅 Data: ${formatDate(alert.createdAt)}`,
+      `${alert.description}\n\nTipo: ${getTypeText(alert.type)}\n${getSeverityText(alert.severity)}\nData: ${formatDate(alert.createdAt)}`,
       [{ text: 'Fechar', style: 'cancel' }]
     );
   };
@@ -189,7 +189,7 @@ export default function AlertsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔔</Text>
+            <Text style={styles.emptyIcon}></Text>
             <Text style={styles.emptyTitle}>Nenhum alerta no momento</Text>
             <Text style={styles.emptyMessage}>
               Seu sistema está funcionando normalmente
