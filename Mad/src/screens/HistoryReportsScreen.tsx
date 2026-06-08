@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { 
   leituraAPI, 
@@ -115,10 +116,10 @@ export default function HistoryReportsScreen() {
   }, [selectedPeriod]);
 
   const getAverageMoistureStatus = (moisture: number) => {
-    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#c53d3d', icon: '' };
-    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#d28e28', icon: '' };
-    if (moisture < 70) return { text: 'Ideal', color: '#3c885b', icon: '' };
-    return { text: 'Excesso de umidade', color: '#5668c4', icon: '' };
+    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#c53d3d' };
+    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#d28e28' };
+    if (moisture < 70) return { text: 'Ideal', color: '#3c885b' };
+    return { text: 'Excesso de umidade', color: '#5668c4' };
   };
 
   const PeriodButton = ({ period, label }: { period: 'week' | 'month' | 'year'; label: string }) => (
@@ -132,9 +133,9 @@ export default function HistoryReportsScreen() {
     </TouchableOpacity>
   );
 
-  const StatCard = ({ title, value, unit, icon, color }: any) => (
+  const StatCard = ({ title, value, unit, iconPath, color }: any) => (
     <View style={[styles.statCard, { borderLeftColor: color }]}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <Image source={iconPath} style={styles.statIcon} />
       <View style={styles.statContent}>
         <Text style={styles.statTitle}>{title}</Text>
         <Text style={[styles.statValue, { color }]}>
@@ -180,27 +181,27 @@ export default function HistoryReportsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Economia e Sustentabilidade</Text>
         <StatCard
-          icon="💧"
+          iconPath={require('../img/waterdrop.png')}
           title="Água Economizada"
           value={reportData.totalWaterSaved}
           unit=" L"
           color="#5668c4"
         />
         <StatCard
-          icon="💰"
+          iconPath={require('../img/money-bag.png')}
           title="Economia Estimada"
           value={`R$ ${reportData.estimatedSaving.toFixed(2)}`}
           color="#afa34c"
         />
         <StatCard
-          icon="🚫"
+          iconPath={require('../img/forbidden.png')}
           title="Irrigações Bloqueadas"
           value={reportData.totalIrrigationBlocks}
           unit=" vezes"
           color="#c53d3d"
         />
         <StatCard
-          icon="📈"
+          iconPath={require('../img/copywriting.png')}
           title="Total de Leituras"
           value={reportData.totalReadings}
           unit=" registros"
@@ -219,7 +220,7 @@ export default function HistoryReportsScreen() {
             </Text>
           </View>
           <View style={styles.moistureStatusRow}>
-            <Text style={styles.moistureStatusIcon}>{moistureStatus.icon}</Text>
+            <View style={[styles.statusDot, { backgroundColor: moistureStatus.color }]} />
             <Text style={[styles.moistureStatus, { color: moistureStatus.color }]}>
               {moistureStatus.text}
             </Text>
@@ -260,26 +261,34 @@ export default function HistoryReportsScreen() {
                     },
                   ]}
                 >
+                  <Image 
+                    source={reading.irrigationRecommended ? require('../img/water-drop.png') : require('../img/forbidden.png')} 
+                    style={styles.badgeIcon} 
+                  />
                   <Text style={styles.irrigationBadgeText}>
-                    {reading.irrigationRecommended ? '💧 Irrigar' : '⛔ Bloquear'}
+                    {reading.irrigationRecommended ? 'Irrigar' : 'Bloquear'}
                   </Text>
                 </View>
               </View>
               <View style={styles.historyDetails}>
                 <View style={styles.historyItem}>
-                  <Text style={styles.historyLabel}>💧 Umidade:</Text>
+                  <Image source={require('../img/water-drop.png')} style={styles.historyIcon} />
+                  <Text style={styles.historyLabel}>Umidade:</Text>
                   <Text style={styles.historyValue}>{reading.soilMoisture}%</Text>
                 </View>
                 <View style={styles.historyItem}>
-                  <Text style={styles.historyLabel}>🌡️ Temp:</Text>
+                  <Image source={require('../img/stock-market.png')} style={styles.historyIcon} />
+                  <Text style={styles.historyLabel}>Temp:</Text>
                   <Text style={styles.historyValue}>{reading.temperature}°C</Text>
                 </View>
                 <View style={styles.historyItem}>
-                  <Text style={styles.historyLabel}>💨 Umidade Ar:</Text>
+                  <Image source={require('../img/water-drop.png')} style={styles.historyIcon} />
+                  <Text style={styles.historyLabel}>Umidade Ar:</Text>
                   <Text style={styles.historyValue}>{reading.humidity}%</Text>
                 </View>
                 <View style={styles.historyItem}>
-                  <Text style={styles.historyLabel}>🌧️ Previsão Chuva:</Text>
+                  <Image source={require('../img/bell.png')} style={styles.historyIcon} />
+                  <Text style={styles.historyLabel}>Previsão Chuva:</Text>
                   <Text style={styles.historyValue}>{reading.satelliteRainPrediction}%</Text>
                 </View>
               </View>
@@ -379,8 +388,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statIcon: {
-    fontSize: 32,
+    width: 40,
+    height: 40,
     marginRight: 16,
+    resizeMode: 'contain',
   },
   statContent: {
     flex: 1,
@@ -424,9 +435,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  moistureStatusIcon: {
-    fontSize: 16,
-    marginRight: 6,
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
   },
   moistureStatus: {
     fontSize: 14,
@@ -471,9 +484,17 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   irrigationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    gap: 4,
+  },
+  badgeIcon: {
+    width: 14,
+    height: 14,
+    resizeMode: 'contain',
   },
   irrigationBadgeText: {
     fontSize: 11,
@@ -490,10 +511,17 @@ const styles = StyleSheet.create({
     minWidth: 70,
     marginVertical: 4,
   },
+  historyIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    marginBottom: 4,
+  },
   historyLabel: {
     fontSize: 10,
     color: '#999',
-    marginBottom: 4,
+    marginBottom: 2,
+    marginTop: 4,
   },
   historyValue: {
     fontSize: 13,
