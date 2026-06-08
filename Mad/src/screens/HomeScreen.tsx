@@ -156,16 +156,7 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={[styles.statCard, { borderTopColor: '#FF9800' }]}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Text style={styles.statIcon}>⚠️</Text>
-          <Text style={styles.statTitle}>Alertas</Text>
-          <Text style={[styles.statValue, { color: '#FF9800' }]}>
-            {unreadAlerts}
-          </Text>
-        </TouchableOpacity>
+        
         
         <TouchableOpacity 
           style={[styles.statCard, { borderTopColor: '#2196F3' }]}

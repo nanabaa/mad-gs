@@ -1,4 +1,4 @@
-// src/screens/AlertsScreen.tsx - Versão corrigida (sem conflito com Alert do React Native)
+// src/screens/AlertsScreen.tsx - Versão sem status de lido/não lido
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -8,10 +8,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert, // Este é o Alert do React Native
+  Alert,
 } from 'react-native';
 
-// Renomeando a interface para AlertData para evitar conflito
 interface AlertData {
   id: number;
   title: string;
@@ -19,11 +18,10 @@ interface AlertData {
   type: 'frost' | 'pest' | 'drought' | 'optimal_planting';
   severity: 'high' | 'medium' | 'low';
   createdAt: string;
-  read: boolean;
   plantationId?: number;
 }
 
-// Mock da API (para teste sem backend)
+// Mock da API (sem o campo 'read')
 const alertAPI = {
   getAll: () => {
     return Promise.resolve({
@@ -35,7 +33,6 @@ const alertAPI = {
           type: 'frost' as const,
           severity: 'high' as const,
           createdAt: new Date().toISOString(),
-          read: false,
         },
         {
           id: 2,
@@ -44,7 +41,6 @@ const alertAPI = {
           type: 'optimal_planting' as const,
           severity: 'low' as const,
           createdAt: new Date(Date.now() - 86400000).toISOString(),
-          read: true,
         },
         {
           id: 3,
@@ -53,13 +49,9 @@ const alertAPI = {
           type: 'pest' as const,
           severity: 'medium' as const,
           createdAt: new Date(Date.now() - 172800000).toISOString(),
-          read: false,
         },
       ],
     });
-  },
-  markAsRead: (id: number) => {
-    return Promise.resolve({ data: {} });
   },
 };
 
@@ -142,29 +134,13 @@ export default function AlertsScreen() {
     Alert.alert(
       alert.title,
       `${alert.description}\n\n📋 Tipo: ${getTypeText(alert.type)}\n⚡ ${getSeverityText(alert.severity)}\n📅 Data: ${formatDate(alert.createdAt)}`,
-      [
-        { text: 'Fechar', style: 'cancel' },
-        { text: 'Marcar como Lido', onPress: () => markAsRead(alert.id) }
-      ]
+      [{ text: 'Fechar', style: 'cancel' }]
     );
-  };
-
-  const markAsRead = async (id: number) => {
-    try {
-      await alertAPI.markAsRead(id);
-      setAlerts(prevAlerts =>
-        prevAlerts.map(alert =>
-          alert.id === id ? { ...alert, read: true } : alert
-        )
-      );
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível marcar o alerta como lido');
-    }
   };
 
   const renderItem = ({ item }: { item: AlertData }) => (
     <TouchableOpacity
-      style={[styles.alertCard, !item.read && styles.unreadCard]}
+      style={styles.alertCard}
       onPress={() => showAlertDetails(item)}
       activeOpacity={0.7}
     >
@@ -186,12 +162,6 @@ export default function AlertsScreen() {
         <Text style={styles.alertType}>{getTypeText(item.type)}</Text>
         <Text style={styles.alertDate}>{formatDate(item.createdAt)}</Text>
       </View>
-      
-      {!item.read && (
-        <View style={styles.unreadIndicator}>
-          <Text style={styles.unreadText}>🔔 Não lido</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 
@@ -261,11 +231,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-  unreadCard: {
-    backgroundColor: '#FFF8E1',
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
-  },
   alertHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -319,18 +284,6 @@ const styles = StyleSheet.create({
   alertDate: {
     fontSize: 11,
     color: '#999',
-  },
-  unreadIndicator: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#FFE0B2',
-    alignItems: 'center',
-  },
-  unreadText: {
-    fontSize: 11,
-    color: '#FF9800',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
