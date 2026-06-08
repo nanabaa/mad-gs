@@ -1,4 +1,4 @@
-// src/screens/PlantationsScreen.tsx - CRUD via API
+// src/screens/PlantationsScreen.tsx - Com exclusão funcionando
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -13,7 +13,13 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import { plantacaoAPI, Plantation, handleApiError } from '../services/api';
+import { 
+  getPlantations, 
+  deletePlantation, 
+  updatePlantationsWithRealData,
+  Plantation,
+  handleApiError 
+} from '../services/api';
 
 type PlantationsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Plantations'>;
 
@@ -25,10 +31,10 @@ export default function PlantationsScreen() {
 
   const fetchPlantations = useCallback(async () => {
     try {
-      console.log('🔄 Buscando plantações da API...');
-      const response = await plantacaoAPI.getAll();
-      console.log('📊 Resposta da API:', response.data);
-      setPlantations(response.data);
+      console.log('🔄 Buscando plantações...');
+      const updatedPlantations = await updatePlantationsWithRealData();
+      console.log('📊 Plantações carregadas:', updatedPlantations.length);
+      setPlantations(updatedPlantations);
     } catch (error) {
       console.error('❌ Erro ao buscar plantações:', error);
       Alert.alert('Erro', handleApiError(error));
@@ -44,10 +50,11 @@ export default function PlantationsScreen() {
     }, [fetchPlantations])
   );
 
-  const handleDelete = async (id: number, name: string) => {
+  // Função de exclusão
+  const handleDelete = (id: number, name: string) => {
     Alert.alert(
-      'Confirmar exclusão',
-      `Tem certeza que deseja excluir a plantação "${name}"?`,
+      'Excluir Plantação',
+      `Tem certeza que deseja excluir "${name}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -56,13 +63,18 @@ export default function PlantationsScreen() {
           onPress: async () => {
             try {
               console.log(`🗑️ Excluindo plantação ID: ${id}`);
-              await plantacaoAPI.delete(id);
-              // Remove da lista local
-              setPlantations(prev => prev.filter(p => p.id !== id));
-              Alert.alert('Sucesso', 'Plantação excluída com sucesso');
+              const success = await deletePlantation(id);
+              
+              if (success) {
+                console.log('✅ Exclusão bem sucedida');
+                setPlantations(prev => prev.filter(p => p.id !== id));
+                Alert.alert('Sucesso', 'Plantação excluída com sucesso');
+              } else {
+                Alert.alert('Erro', 'Plantação não encontrada');
+              }
             } catch (error) {
               console.error('❌ Erro na exclusão:', error);
-              Alert.alert('Erro', handleApiError(error));
+              Alert.alert('Erro', 'Não foi possível excluir a plantação');
             }
           },
         },
@@ -86,11 +98,18 @@ export default function PlantationsScreen() {
 
   const getIrrigationStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Ativa';
-      case 'inactive': return 'Inativa';
-      case 'blocked': return 'Bloqueada (Chuva prevista)';
+      case 'active': return '💧 Ativa';
+      case 'inactive': return '⏸️ Inativa';
+      case 'blocked': return '🌧️ Bloqueada';
       default: return status;
     }
+  };
+
+  const getMoistureColor = (moisture: number) => {
+    if (moisture < 30) return '#F44336';
+    if (moisture < 50) return '#FF9800';
+    if (moisture < 70) return '#4CAF50';
+    return '#2196F3';
   };
 
   const renderItem = ({ item }: { item: Plantation }) => (
@@ -108,27 +127,48 @@ export default function PlantationsScreen() {
         </View>
         
         <View style={styles.cardDetails}>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Cultura:</Text>
-            <Text style={styles.detailValue}>{item.cropType}</Text>
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>🌾 Cultura</Text>
+              <Text style={styles.detailValue}>{item.cropType}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>📐 Área</Text>
+              <Text style={styles.detailValue}>{item.area} ha</Text>
+            </View>
           </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Área:</Text>
-            <Text style={styles.detailValue}>{item.area} ha</Text>
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>💧 Umidade</Text>
+              <Text style={[styles.detailValue, { color: getMoistureColor(item.soilMoisture) }]}>
+                {item.soilMoisture}%
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>🌡️ Temp</Text>
+              <Text style={styles.detailValue}>{item.temperature}°C</Text>
+            </View>
           </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Umidade:</Text>
-            <Text style={styles.detailValue}>{item.soilMoisture}%</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Temperatura:</Text>
-            <Text style={styles.detailValue}>{item.temperature}°C</Text>
+        </View>
+
+        <View style={styles.progressSection}>
+          <View style={styles.progressBarContainer}>
+            <View
+              style={[
+                styles.progressBar,
+                {
+                  width: `${Math.min(item.soilMoisture, 100)}%`,
+                  backgroundColor: getMoistureColor(item.soilMoisture),
+                },
+              ]}
+            />
           </View>
         </View>
 
         <View style={styles.cardFooter}>
           <Text style={styles.plantingDate}>
-            Plantio: {new Date(item.plantingDate).toLocaleDateString('pt-BR')}
+            📅 Plantio: {new Date(item.plantingDate).toLocaleDateString('pt-BR')}
           </Text>
         </View>
       </TouchableOpacity>
@@ -138,7 +178,7 @@ export default function PlantationsScreen() {
         onPress={() => handleDelete(item.id, item.name)}
         activeOpacity={0.7}
       >
-        <Text style={styles.deleteText}>🗑️ Excluir</Text>
+        <Text style={styles.deleteText}>🗑️ Excluir Plantação</Text>
       </TouchableOpacity>
     </View>
   );
@@ -166,7 +206,7 @@ export default function PlantationsScreen() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -177,7 +217,6 @@ export default function PlantationsScreen() {
             </Text>
           </View>
         }
-        contentContainerStyle={plantations.length === 0 ? styles.emptyList : styles.list}
       />
     </View>
   );
@@ -212,24 +251,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   plantationCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    marginHorizontal: 16,
     marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
     overflow: 'hidden',
   },
   cardContent: {
@@ -259,33 +286,50 @@ const styles = StyleSheet.create({
   cardDetails: {
     marginBottom: 12,
   },
-  detailItem: {
+  detailRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  detailItem: {
+    flex: 1,
   },
   detailLabel: {
-    width: 80,
-    fontSize: 14,
-    color: '#666',
+    fontSize: 11,
+    color: '#999',
+    marginBottom: 2,
   },
   detailValue: {
-    flex: 1,
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+  },
+  progressSection: {
+    marginVertical: 8,
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
   },
   cardFooter: {
     borderTopWidth: 1,
     borderTopColor: '#EEEEEE',
     paddingTop: 10,
+    marginTop: 8,
   },
   plantingDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
   },
   deleteButton: {
     backgroundColor: '#FFEBEE',
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#FFCDD2',
@@ -293,7 +337,7 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#F44336',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -311,5 +355,6 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#CCC',
+    textAlign: 'center',
   },
 });

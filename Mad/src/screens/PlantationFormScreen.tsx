@@ -1,4 +1,4 @@
-// src/screens/PlantationFormScreen.tsx - Create/Update via API
+// src/screens/PlantationFormScreen.tsx - Versão COMPLETA com todos os estilos
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,7 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { plantacaoAPI, Plantation, handleApiError } from '../services/api';
+import { 
+  getPlantations, 
+  deletePlantation, 
+  createPlantation, 
+  updatePlantation, 
+  getLatestSensorData,
+  handleApiError 
+} from '../services/api';
 
 type RouteParams = {
   plantationId?: number;
@@ -23,6 +30,7 @@ export default function PlantationFormScreen() {
   const { plantationId } = route.params as RouteParams;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [defaultSensorData, setDefaultSensorData] = useState({ moisture: 50, temperature: 25 });
   const [formData, setFormData] = useState({
     name: '',
     cropType: '',
@@ -31,23 +39,43 @@ export default function PlantationFormScreen() {
   });
 
   useEffect(() => {
+    loadDefaultSensorData();
     if (plantationId) {
       loadPlantation();
     }
   }, [plantationId]);
 
+  const loadDefaultSensorData = async () => {
+    try {
+      const latestSensor = await getLatestSensorData();
+      if (latestSensor) {
+        setDefaultSensorData({
+          moisture: latestSensor.soilMoisture,
+          temperature: latestSensor.temperature,
+        });
+      }
+    } catch (error) {
+      console.log('Usando dados padrão do sensor');
+    }
+  };
+
   const loadPlantation = async () => {
     setLoading(true);
     try {
       console.log(`📝 Carregando plantação ID: ${plantationId}`);
-      const response = await plantacaoAPI.getById(plantationId);
-      const plantation = response.data;
-      setFormData({
-        name: plantation.name,
-        cropType: plantation.cropType,
-        area: plantation.area.toString(),
-        plantingDate: plantation.plantingDate.split('T')[0],
-      });
+      const plantations = await getPlantations();
+      const plantation = plantations.find(p => p.id === plantationId);
+      if (plantation) {
+        setFormData({
+          name: plantation.name,
+          cropType: plantation.cropType,
+          area: plantation.area.toString(),
+          plantingDate: plantation.plantingDate.split('T')[0],
+        });
+      } else {
+        Alert.alert('Erro', 'Plantação não encontrada');
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('❌ Erro ao carregar plantação:', error);
       Alert.alert('Erro', handleApiError(error));
@@ -70,21 +98,17 @@ export default function PlantationFormScreen() {
         cropType: formData.cropType,
         area: parseFloat(formData.area),
         plantingDate: formData.plantingDate,
-        soilMoisture: Math.random() * 50 + 30, // Simulado
-        temperature: Math.random() * 15 + 20,  // Simulado
+        soilMoisture: defaultSensorData.moisture,
+        temperature: defaultSensorData.temperature,
         irrigationStatus: 'inactive' as const,
         lastIrrigation: new Date().toISOString(),
       };
 
       if (plantationId) {
-        // UPDATE via API
-        console.log(`📝 Atualizando plantação ID: ${plantationId}`);
-        await plantacaoAPI.update(plantationId, payload);
+        await updatePlantation(plantationId, payload);
         Alert.alert('Sucesso', 'Plantação atualizada com sucesso');
       } else {
-        // CREATE via API
-        console.log('📝 Criando nova plantação');
-        await plantacaoAPI.create(payload);
+        await createPlantation(payload);
         Alert.alert('Sucesso', 'Plantação cadastrada com sucesso');
       }
       navigation.goBack();
@@ -107,25 +131,25 @@ export default function PlantationFormScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.formCard}>
-        <Text style={styles.label}>Nome da Plantação *</Text>
+        <Text style={styles.label}>🌾 Nome da Plantação *</Text>
         <TextInput
           style={styles.input}
           value={formData.name}
           onChangeText={(text) => setFormData({ ...formData, name: text })}
-          placeholder="Ex: Talhão Norte"
+          placeholder="Ex: Talhão Norte, Fazenda Principal"
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>Tipo de Cultura *</Text>
+        <Text style={styles.label}>🌱 Tipo de Cultura *</Text>
         <TextInput
           style={styles.input}
           value={formData.cropType}
           onChangeText={(text) => setFormData({ ...formData, cropType: text })}
-          placeholder="Ex: Soja, Milho, Café"
+          placeholder="Ex: Soja, Milho, Café, Trigo"
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>Área (hectares) *</Text>
+        <Text style={styles.label}>📐 Área (hectares) *</Text>
         <TextInput
           style={styles.input}
           value={formData.area}
@@ -135,14 +159,23 @@ export default function PlantationFormScreen() {
           placeholderTextColor="#999"
         />
 
-        <Text style={styles.label}>Data de Plantio *</Text>
+        <Text style={styles.label}>📅 Data de Plantio *</Text>
         <TextInput
           style={styles.input}
           value={formData.plantingDate}
           onChangeText={(text) => setFormData({ ...formData, plantingDate: text })}
-          placeholder="YYYY-MM-DD"
+          placeholder="YYYY-MM-DD (Ex: 2024-03-20)"
           placeholderTextColor="#999"
         />
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>📡 Dados do Sensor Atual</Text>
+          <Text style={styles.infoText}>
+            💧 Umidade do solo: {defaultSensorData.moisture}%{'\n'}
+            🌡️ Temperatura: {defaultSensorData.temperature}°C{'\n'}
+            *Dados atualizados automaticamente pela estação meteorológica
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[styles.saveButton, saving && styles.disabledButton]}
@@ -150,16 +183,18 @@ export default function PlantationFormScreen() {
           disabled={saving}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? 'Salvando...' : plantationId ? 'Atualizar' : 'Cadastrar'}
+            {saving ? '💾 Salvando...' : plantationId ? '📝 Atualizar Plantação' : '✅ Cadastrar Plantação'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>💡 Sobre o monitoramento</Text>
-        <Text style={styles.infoText}>
-          Ao cadastrar sua plantação, o AgroOrbit Link começará a monitorar a umidade do solo
-          e cruzará com dados de satélite para otimizar a irrigação e prever riscos.
+      <View style={styles.tipsBox}>
+        <Text style={styles.tipsTitle}>💡 Dicas de Monitoramento</Text>
+        <Text style={styles.tipsText}>
+          • O sistema monitora a umidade do solo em tempo real{'\n'}
+          • Dados de satélite preveem chuva e otimizam a irrigação{'\n'}
+          • Alertas serão enviados em condições climáticas extremas{'\n'}
+          • A economia de água é calculada automaticamente
         </Text>
       </View>
     </ScrollView>
@@ -175,6 +210,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -182,6 +218,10 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   label: {
     fontSize: 14,
@@ -199,12 +239,30 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: '#FAFAFA',
   },
+  infoBox: {
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  infoTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 6,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
+  },
   saveButton: {
     backgroundColor: '#2E7D32',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
   disabledButton: {
     backgroundColor: '#9E9E9E',
@@ -214,20 +272,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  infoBox: {
-    backgroundColor: '#E8F5E9',
+  tipsBox: {
+    backgroundColor: '#FFF3E0',
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    marginBottom: 30,
   },
-  infoTitle: {
+  tipsTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: '#E65100',
     marginBottom: 8,
   },
-  infoText: {
-    fontSize: 13,
+  tipsText: {
+    fontSize: 12,
     color: '#555',
     lineHeight: 18,
   },

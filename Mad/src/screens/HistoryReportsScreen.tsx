@@ -1,4 +1,4 @@
-// src/screens/HistoryReportsScreen.tsx
+// src/screens/HistoryReportsScreen.tsx - Versão corrigida com a nova API
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -10,13 +10,21 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { sensorAPI, plantationAPI, Plantation, SensorData } from '../services/api';
+import { 
+  soloAPI, 
+  getPlantations, 
+  getSensorHistory,
+  SensorData, 
+  Plantation,
+  handleApiError 
+} from '../services/api';
 
 interface ReportData {
   totalWaterSaved: number;
   averageMoisture: number;
   totalIrrigationBlocks: number;
   estimatedSaving: number;
+  totalReadings: number;
 }
 
 export default function HistoryReportsScreen() {
@@ -30,39 +38,48 @@ export default function HistoryReportsScreen() {
     averageMoisture: 0,
     totalIrrigationBlocks: 0,
     estimatedSaving: 0,
+    totalReadings: 0,
   });
 
   const fetchData = async () => {
     try {
       const daysMap = { week: 7, month: 30, year: 365 };
-      const [historyRes, plantationsRes] = await Promise.all([
-        sensorAPI.getHistory(daysMap[selectedPeriod]),
-        plantationAPI.getAll(),
+      const days = daysMap[selectedPeriod];
+      
+      console.log(`🔄 Buscando histórico dos últimos ${days} dias...`);
+      
+      // Busca histórico de sensores e plantações
+      const [historyData, plantationsData] = await Promise.all([
+        getSensorHistory(days),
+        getPlantations(),
       ]);
 
-      setSensorHistory(historyRes.data);
-      setPlantations(plantationsRes.data);
+      setSensorHistory(historyData);
+      setPlantations(plantationsData);
 
       // Calcular relatórios
-      const blockedCount = plantationsRes.data.filter(
+      const blockedCount = plantationsData.filter(
         (p: Plantation) => p.irrigationStatus === 'blocked'
       ).length;
       
-      const avgMoisture = historyRes.data.length > 0
-        ? historyRes.data.reduce((sum: number, item: SensorData) => sum + item.soilMoisture, 0) / historyRes.data.length
+      const avgMoisture = historyData.length > 0
+        ? historyData.reduce((sum: number, item: SensorData) => sum + item.soilMoisture, 0) / historyData.length
         : 0;
 
+      // Cada irrigação bloqueada economiza aproximadamente 150 litros
       const waterSaved = blockedCount * 150;
-      const estimatedSaving = waterSaved * 2.5; // R$ 2.50 por litro economizado
+      const estimatedSaving = waterSaved * 2.5; // R$ 2.50 por 1000 litros economizados
 
       setReportData({
         totalWaterSaved: waterSaved,
         averageMoisture: avgMoisture,
         totalIrrigationBlocks: blockedCount,
         estimatedSaving: estimatedSaving,
+        totalReadings: historyData.length,
       });
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os dados históricos');
+      console.error('❌ Erro ao carregar dados históricos:', error);
+      Alert.alert('Erro', handleApiError(error));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -79,10 +96,10 @@ export default function HistoryReportsScreen() {
   }, [selectedPeriod]);
 
   const getAverageMoistureStatus = (moisture: number) => {
-    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#F44336' };
-    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#FF9800' };
-    if (moisture < 70) return { text: 'Ideal', color: '#4CAF50' };
-    return { text: 'Excesso de umidade', color: '#2196F3' };
+    if (moisture < 30) return { text: 'Crítico - Solo seco', color: '#F44336', icon: '🔥' };
+    if (moisture < 50) return { text: 'Atenção - Solo baixo', color: '#FF9800', icon: '⚠️' };
+    if (moisture < 70) return { text: 'Ideal', color: '#4CAF50', icon: '✅' };
+    return { text: 'Excesso de umidade', color: '#2196F3', icon: '💧' };
   };
 
   const formatDate = (dateString: string) => {
@@ -133,7 +150,7 @@ export default function HistoryReportsScreen() {
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />
       }
     >
       <View style={styles.header}>
@@ -149,6 +166,7 @@ export default function HistoryReportsScreen() {
         <PeriodButton period="year" label="Ano" />
       </View>
 
+      {/* Cards de Estatísticas */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>💰 Economia e Sustentabilidade</Text>
         <StatCard
@@ -171,8 +189,16 @@ export default function HistoryReportsScreen() {
           unit=" vezes"
           color="#FF9800"
         />
+        <StatCard
+          icon="📈"
+          title="Total de Leituras"
+          value={reportData.totalReadings}
+          unit=" registros"
+          color="#9C27B0"
+        />
       </View>
 
+      {/* Saúde do Solo */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🌱 Saúde do Solo</Text>
         <View style={styles.moistureCard}>
@@ -182,9 +208,12 @@ export default function HistoryReportsScreen() {
               {reportData.averageMoisture.toFixed(1)}%
             </Text>
           </View>
-          <Text style={[styles.moistureStatus, { color: moistureStatus.color }]}>
-            {moistureStatus.text}
-          </Text>
+          <View style={styles.moistureStatusRow}>
+            <Text style={styles.moistureStatusIcon}>{moistureStatus.icon}</Text>
+            <Text style={[styles.moistureStatus, { color: moistureStatus.color }]}>
+              {moistureStatus.text}
+            </Text>
+          </View>
           <View style={styles.progressBarContainer}>
             <View
               style={[
@@ -199,6 +228,7 @@ export default function HistoryReportsScreen() {
         </View>
       </View>
 
+      {/* Plantações Cadastradas */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📋 Plantações Cadastradas</Text>
         {plantations.length === 0 ? (
@@ -226,23 +256,23 @@ export default function HistoryReportsScreen() {
               </View>
               <View style={styles.plantationDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Cultura:</Text>
+                  <Text style={styles.detailLabel}>🌾 Cultura:</Text>
                   <Text style={styles.detailValue}>{plantation.cropType}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Área:</Text>
+                  <Text style={styles.detailLabel}>📐 Área:</Text>
                   <Text style={styles.detailValue}>{plantation.area} ha</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Umidade:</Text>
+                  <Text style={styles.detailLabel}>💧 Umidade:</Text>
                   <Text style={styles.detailValue}>{plantation.soilMoisture}%</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Temperatura:</Text>
+                  <Text style={styles.detailLabel}>🌡️ Temperatura:</Text>
                   <Text style={styles.detailValue}>{plantation.temperature}°C</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Status Irrigação:</Text>
+                  <Text style={styles.detailLabel}>🚰 Status Irrigação:</Text>
                   <Text
                     style={[
                       styles.detailValue,
@@ -257,10 +287,10 @@ export default function HistoryReportsScreen() {
                     ]}
                   >
                     {plantation.irrigationStatus === 'active'
-                      ? 'Ativa'
+                      ? '✅ Ativa'
                       : plantation.irrigationStatus === 'blocked'
-                      ? 'Bloqueada (Chuva)'
-                      : 'Inativa'}
+                      ? '⛔ Bloqueada (Chuva)'
+                      : '⏸️ Inativa'}
                   </Text>
                 </View>
               </View>
@@ -269,11 +299,12 @@ export default function HistoryReportsScreen() {
         )}
       </View>
 
+      {/* Histórico de Leituras */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📈 Histórico de Leituras</Text>
         {sensorHistory.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Nenhuma leitura disponível</Text>
+            <Text style={styles.emptyText}>Nenhuma leitura disponível no período</Text>
           </View>
         ) : (
           sensorHistory.slice(0, 10).map((reading, index) => (
@@ -291,7 +322,7 @@ export default function HistoryReportsScreen() {
                   ]}
                 >
                   <Text style={styles.irrigationBadgeText}>
-                    {reading.irrigationRecommended ? 'Irrigar' : 'Bloquear'}
+                    {reading.irrigationRecommended ? '💧 Irrigar' : '⛔ Bloquear'}
                   </Text>
                 </View>
               </View>
@@ -303,6 +334,10 @@ export default function HistoryReportsScreen() {
                 <View style={styles.historyItem}>
                   <Text style={styles.historyLabel}>🌡️ Temp:</Text>
                   <Text style={styles.historyValue}>{reading.temperature}°C</Text>
+                </View>
+                <View style={styles.historyItem}>
+                  <Text style={styles.historyLabel}>💨 Umidade Ar:</Text>
+                  <Text style={styles.historyValue}>{reading.humidity}%</Text>
                 </View>
                 <View style={styles.historyItem}>
                   <Text style={styles.historyLabel}>🌧️ Previsão Chuva:</Text>
@@ -345,8 +380,8 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#2E7D32',
     padding: 20,
-    paddingTop: 30,
-    paddingBottom: 30,
+    paddingTop: 40,
+    paddingBottom: 25,
   },
   headerTitle: {
     fontSize: 22,
@@ -445,10 +480,18 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
+  moistureStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  moistureStatusIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
   moistureStatus: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 12,
   },
   progressBarContainer: {
     height: 8,
@@ -492,6 +535,7 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 6,
   },
   detailLabel: {
     fontSize: 13,
@@ -543,17 +587,20 @@ const styles = StyleSheet.create({
   historyDetails: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    flexWrap: 'wrap',
   },
   historyItem: {
     alignItems: 'center',
+    minWidth: 70,
+    marginVertical: 4,
   },
   historyLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
     marginBottom: 4,
   },
   historyValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#333',
   },
