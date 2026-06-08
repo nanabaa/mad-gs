@@ -1,4 +1,3 @@
-// src/screens/LeiturasScreen.tsx - Com tratamento de erro correto
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,

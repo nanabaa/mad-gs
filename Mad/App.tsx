@@ -1,18 +1,16 @@
-// App.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Telas
+
 import HomeScreen from './src/screens/HomeScreen';
 import LeiturasScreen from './src/screens/LeiturasScreen';
 import AlertsScreen from './src/screens/AlertsScreen';
 import LeituraFormScreen from './src/screens/LeituraFormScreen';
 import HistoryReportsScreen from './src/screens/HistoryReportsScreen';
 
-// Exportando o tipo corretamente
 export type RootStackParamList = {
   Home: undefined;
   Leituras: undefined;

@@ -1,4 +1,3 @@
-// src/screens/AlertsScreen.tsx - Versão sem status de lido/não lido
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -21,7 +20,7 @@ interface AlertData {
   plantationId?: number;
 }
 
-// Mock da API (sem o campo 'read')
+// Mock da API 
 const alertAPI = {
   getAll: () => {
     return Promise.resolve({

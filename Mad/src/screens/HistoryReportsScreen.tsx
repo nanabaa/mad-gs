@@ -1,4 +1,3 @@
-// src/screens/HistoryReportsScreen.tsx - Versão ajustada (usando apenas leituraAPI)
 import React, { useEffect, useState } from 'react';
 import {
   View,

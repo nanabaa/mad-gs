@@ -1,4 +1,3 @@
-// src/screens/LeituraFormScreen.tsx - Create/Update via API
 import React, { useEffect, useState } from 'react';
 import {
   View,
