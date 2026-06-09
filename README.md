@@ -1,4 +1,4 @@
-AgroOrbit Link - MOBILE APPLICATION DEVELOPMENT GLOBL SOLUTION
+AgroOrbit Link - MOBILE APPLICATION DEVELOPMENT GLOBAL SOLUTION
 
 Link do repositório: https://github.com/nanabaa/mad-gs.git
 
