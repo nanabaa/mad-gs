@@ -1,11 +1,17 @@
 AgroOrbit Link - MOBILE APPLICATION DEVELOPMENT GLOBL SOLUTION
 
 Link do repositório: https://github.com/nanabaa/mad-gs.git
+
 Link do vídeo: https://youtube.com/shorts/verlXD2tFRs?feature=share
+
 Grupo: Ana Clara de Oliveira Nascimento | RM 561957
+
 Isis Macedo | RM 561497
+
 Henrique Pereira | RM 565608
+
 Pedro Mariutti | RM 75999
+
 Rafael Carvalho Meireles | RM 563413
 
 O **AgroOrbit Link** é uma plataforma de agricultura de precisão que conecta exploração espacial a soluções reais para o campo. O projeto foca na **economia de água** e na **otimização do plantio**, utilizando dados de sensores IoT (ESP32) integrados a satélites da NASA e ESA para análise do solo.
@@ -30,26 +36,47 @@ Este repositório contém a **solução mobile com 5 telas para usuário final**
 Repositório original: https://github.com/nanabaa/mad-gs
 
 mad-gs/ 
+
 └── mad/ 
+
 │ ├── src/ 
+
 | │ ├── screens/ 
+
 | │ │ ├── AlertsScreen.tsx 
+
 │ | │ ├── HistoryReportsScreen.tsx 
+
 | | | ├── HomeScreen.tsx 
+
 │ │ | ├── LeituraFormScreen.tsx 
+
 │ │ | ├── LeituraScreen.tsx 
+
 │ | ├── services/ 
+
 │ │ | ├── api.ts
+
 │ │ | ├── storage.ts
+
 │ | ├── types/ 
+
 │ │ | ├── navigation.ts
+
 | └── app.json
+
 | └── App.tsx
+
 | └── index.ts
+
 | └── LICENSE
+
 | └── package-lock.json
+
 | └── package.json
+
 | └── tsconfig.json
+
 └── README.md
 
  ## Como executar o projeto
@@ -66,7 +93,9 @@ mad-gs/
 1. **Clone o repositório**
 
 bash:
+
 git clone https://github.com/nanabaa/mad-gs.git
+
 cd mad-gs/mad
 
 2. **Acesse o cmd pela pasta e instale as dependencias**
@@ -78,7 +107,9 @@ npm install @react-navigation/native @react-navigation/native-stack react-native
 3. **Acesse pelo navegador**
 
 npm run web:	Executa o app no navegador
+
 npm run android:	Executa no Android (emulador ou físico)
+
 npm run ios:	Executa no iOS (apenas Mac)
 
 ***Como o sistema funciona (visão geral)***
@@ -91,18 +122,23 @@ npm run ios:	Executa no iOS (apenas Mac)
 - O fazendeiro visualiza tudo em tempo real no app e pode gerenciar suas áreas plantadas.
 
 Home:
+
 <img width="312" height="679" alt="image" src="https://github.com/user-attachments/assets/5ac0eaef-f730-4cc2-a8af-d8f50d9c9783" />
 
 Tela de relatórios:
+
 <img width="316" height="684" alt="image" src="https://github.com/user-attachments/assets/80cc04ee-2840-4932-a1d9-3c5116730201" />
 
 Tela de leituras do solo:
+
 <img width="326" height="681" alt="image" src="https://github.com/user-attachments/assets/c6a0a5e2-3633-4f28-a8a8-135284fbd0d3" />
 
 Tela de alertas:
+
 <img width="314" height="578" alt="image" src="https://github.com/user-attachments/assets/1989abcd-0201-435c-ae93-f697d01d92f3" />
 
 Tela de criação de leituras do solo:
+
 <img width="321" height="683" alt="image" src="https://github.com/user-attachments/assets/2b55be03-3846-4977-b9b0-a6048b31fa9c" />
 
 ***Tecnologias utilizadas***
