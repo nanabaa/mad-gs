@@ -1,7 +1,7 @@
 AgroOrbit Link - MOBILE APPLICATION DEVELOPMENT GLOBL SOLUTION
 
 Link do repositório: https://github.com/nanabaa/mad-gs.git
-Link do pitch: 
+Link do vídeo: https://youtube.com/shorts/verlXD2tFRs?feature=share
 Grupo: Ana Clara de Oliveira Nascimento | RM 561957
 Isis Macedo | RM 561497
 Henrique Pereira | RM 565608
