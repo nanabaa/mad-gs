@@ -70,6 +70,7 @@ git clone https://github.com/nanabaa/mad-gs.git
 cd mad-gs/mad
 
 2. **Acesse o cmd pela pasta e instale as dependencias**
+
 npx expo install react-dom react-native-web
  
 npm install @react-navigation/native @react-navigation/native-stack react-native-screens react-native-safe-area-context axios @react-native-async-storage/async-storage react-native-gesture-handler
